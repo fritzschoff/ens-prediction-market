@@ -6,3 +6,4 @@ export * from './useMarketData';
 export * from './useEthPrice';
 export * from './useUserPositions';
 export * from './useRegisterENS';
+export * from './useClaimSubdomain';

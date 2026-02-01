@@ -74,6 +74,7 @@ export function useRegisterENS() {
         return {
           success: false,
           isNameTaken: false,
+          isUnauthorized: false,
           error: 'Wallet not connected',
         };
       }
@@ -85,54 +86,37 @@ export function useRegisterENS() {
         const isAvailable = await checkENSAvailability(params.ensName);
 
         if (!isAvailable) {
-          const error = new Error(
-            `ENS name "${params.ensName}" is already taken`
-          );
-          setSimulationError(error);
           setIsSimulating(false);
           return {
             success: false,
             isNameTaken: true,
-            error: error.message,
+            isUnauthorized: false,
+            error: `ENS name "${params.ensName}" is already taken`,
           };
         }
-
-        const records: PartialMarketRecords = {
-          pool: params.pool,
-          oracle: params.oracle,
-          expiry: params.expiry,
-          criteria: params.criteria,
-          yesToken: params.yesToken,
-          noToken: params.noToken,
-          creator: params.creator,
-        };
-
-        const { to, data } = encodeSetMarketRecords({
-          name: params.ensName,
-          records,
-        });
-
-        await publicClient.call({
-          account: address,
-          to,
-          data,
-        });
 
         setIsSimulating(false);
         return {
           success: true,
           isNameTaken: false,
+          isUnauthorized: false,
         };
       } catch (err) {
         setIsSimulating(false);
-        let errorMessage = 'ENS simulation failed';
+        let errorMessage = 'ENS check failed';
+        let isUnauthorized = false;
 
         if (err instanceof Error) {
           if (err.message.includes('already taken')) {
             errorMessage = err.message;
-          } else if (err.message.includes('unauthorized')) {
+          } else if (
+            err.message.includes('unauthorized') ||
+            err.message.includes('not authorized') ||
+            err.message.includes('Unauthorised')
+          ) {
+            isUnauthorized = true;
             errorMessage =
-              'You do not have permission to set records on this ENS name';
+              'ENS registration requires owning the parent domain. Market will be created without ENS.';
           } else if (err.message.includes('rate limit')) {
             errorMessage = 'Rate limit exceeded. Please try again later.';
           } else {
@@ -140,11 +124,21 @@ export function useRegisterENS() {
           }
         }
 
+        if (isUnauthorized) {
+          return {
+            success: true,
+            isNameTaken: false,
+            isUnauthorized: true,
+            error: errorMessage,
+          };
+        }
+
         const error = new Error(errorMessage);
         setSimulationError(error);
         return {
           success: false,
           isNameTaken: false,
+          isUnauthorized: false,
           error: errorMessage,
         };
       }

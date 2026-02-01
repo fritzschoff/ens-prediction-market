@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useCreateMarket, useRegisterENS } from '@/hooks';
+import { useCreateMarket, useRegisterENS, useClaimSubdomain } from '@/hooks';
 import { CONTRACTS } from '@/lib/contracts';
 
 export default function CreateMarketPage() {
@@ -35,17 +35,29 @@ export default function CreateMarketPage() {
 
   const {
     registerENS,
-    simulateENS,
     isLoading: isRegisteringENS,
-    isSimulating: isSimulatingENS,
     isSuccess: isENSRegistered,
     error: ensError,
-    simulationError: ensSimulationError,
     clearError: clearENSError,
   } = useRegisterENS();
 
-  const [ensRegistrationTriggered, setEnsRegistrationTriggered] =
-    useState(false);
+  const {
+    claimSubdomain,
+    checkSubdomainAvailability,
+    isLoading: isClaimingSubdomain,
+    error: claimError,
+    clearError: clearClaimError,
+  } = useClaimSubdomain();
+
+  const [step, setStep] = useState<
+    | 'idle'
+    | 'checking'
+    | 'simulating'
+    | 'creating'
+    | 'claiming'
+    | 'registering'
+    | 'success'
+  >('idle');
   const [ensBaseParams, setEnsBaseParams] = useState<{
     ensName: string;
     pool: `0x${string}`;
@@ -53,75 +65,87 @@ export default function CreateMarketPage() {
     expiry: number;
     criteria: string;
   } | null>(null);
+  const [subdomainError, setSubdomainError] = useState<string | null>(null);
 
   useEffect(() => {
     if (
       isMarketCreated &&
       marketResult &&
-      !ensRegistrationTriggered &&
-      ensBaseParams
+      ensBaseParams &&
+      step === 'creating'
     ) {
-      setEnsRegistrationTriggered(true);
-      registerENS({
-        ...ensBaseParams,
-        yesToken: marketResult.yesToken,
-        noToken: marketResult.noToken,
-        creator: marketResult.creator,
+      setStep('claiming');
+      const label = ensBaseParams.ensName.replace('.predict.eth', '');
+
+      claimSubdomain({
+        label,
+        newOwner: address!,
+      }).then((result) => {
+        if (result.success) {
+          setStep('registering');
+          registerENS({
+            ...ensBaseParams,
+            yesToken: marketResult.yesToken,
+            noToken: marketResult.noToken,
+            creator: marketResult.creator,
+          });
+        } else {
+          setSubdomainError(result.error || 'Failed to claim subdomain');
+        }
       });
     }
   }, [
     isMarketCreated,
     marketResult,
-    ensRegistrationTriggered,
     ensBaseParams,
+    step,
+    address,
+    claimSubdomain,
     registerENS,
   ]);
 
-  const isLoading = isCreatingMarket || isRegisteringENS;
-  const isSuccess = isMarketCreated && isENSRegistered;
-  const allSimulating = isSimulating || isSimulatingENS;
+  useEffect(() => {
+    if (isENSRegistered && step === 'registering') {
+      setStep('success');
+    }
+  }, [isENSRegistered, step]);
+
+  const isLoading = isCreatingMarket || isClaimingSubdomain || isRegisteringENS;
+  const isSuccess = step === 'success';
+  const allSimulating = isSimulating || step === 'checking';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!address || !question || !criteria || !ensName) return;
 
-    if (simulationError || ensSimulationError) {
-      clearError();
-      clearENSError();
-    }
+    clearError();
+    clearENSError();
+    clearClaimError();
+    setSubdomainError(null);
+    setStep('checking');
 
+    const label = ensName.replace('.predict.eth', '');
+    const fullEnsName = `${label}.predict.eth`;
     const expiryTimestamp = Math.floor(new Date(expiryDate).getTime() / 1000);
 
-    const fullEnsName = ensName.endsWith('.predict.eth')
-      ? ensName
-      : `${ensName}.predict.eth`;
-
-    const marketParams = {
-      question,
-      oracle: address,
-      expiry: expiryTimestamp,
-    };
-
-    const ensParamsForSimulation = {
-      ensName: fullEnsName,
-      pool: CONTRACTS.PREDICTION_HOOK,
-      oracle: address,
-      expiry: expiryTimestamp,
-      criteria,
-      yesToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      noToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
-      creator: address,
-    };
-
     try {
-      const ensSimulation = await simulateENS(ensParamsForSimulation);
-      console.log('ENS simulation', ensSimulation);
+      const isAvailable = await checkSubdomainAvailability(label);
+      console.log('Subdomain available:', isAvailable);
 
-      if (!ensSimulation.success) {
-        console.error('ENS simulation failed:', ensSimulation.error);
+      if (!isAvailable) {
+        setSubdomainError(`Subdomain "${fullEnsName}" is already taken`);
+        setStep('idle');
         return;
       }
+
+      setStep('simulating');
+
+      const marketParams = {
+        question,
+        oracle: address,
+        expiry: expiryTimestamp,
+      };
 
       const marketSimulation = await simulateCreateMarket(marketParams);
       console.log('Market simulation', marketSimulation);
@@ -134,10 +158,14 @@ export default function CreateMarketPage() {
           expiry: expiryTimestamp,
           criteria,
         });
+        setStep('creating');
         await createMarket(marketParams, marketSimulation.gas);
+      } else {
+        setStep('idle');
       }
     } catch (err) {
       console.error('Failed to create market:', err);
+      setStep('idle');
     }
   };
 
@@ -182,7 +210,8 @@ export default function CreateMarketPage() {
               </div>
             </div>
             <p className="mt-2 text-xs text-slate-500">
-              This name will be used to identify your market on ENS
+              This name will be used to identify your market on ENS (requires
+              owning predict.eth domain)
             </p>
           </div>
 
@@ -251,22 +280,37 @@ export default function CreateMarketPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">ENS Registration</span>
-                <span className="text-slate-300">~0.005 ETH</span>
+                <span className="text-slate-300">Optional (gas only)</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-slate-500">Network</span>
+                <span className="text-slate-300">Sepolia Testnet</span>
               </div>
             </div>
           </div>
 
-          {(error || simulationError || ensError || ensSimulationError) && (
+          {(error ||
+            simulationError ||
+            ensError ||
+            claimError ||
+            subdomainError) && (
             <div className="break-words rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
-              {ensSimulationError ? (
+              {subdomainError ? (
                 <>
                   <div className="mb-2 font-semibold">
-                    ENS Name Unavailable:
+                    Subdomain Unavailable:
+                  </div>
+                  <div>{subdomainError}</div>
+                </>
+              ) : claimError ? (
+                <>
+                  <div className="mb-2 font-semibold">
+                    Subdomain Claim Failed:
                   </div>
                   <div>
-                    {ensSimulationError instanceof Error
-                      ? ensSimulationError.message
-                      : 'ENS name check failed'}
+                    {claimError instanceof Error
+                      ? claimError.message
+                      : 'Failed to claim subdomain'}
                   </div>
                 </>
               ) : simulationError ? (
@@ -302,7 +346,7 @@ export default function CreateMarketPage() {
             </div>
           )}
 
-          {isMarketCreated && marketId && !isENSRegistered && (
+          {step === 'claiming' && (
             <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-400">
               <div className="flex items-center gap-2">
                 <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
@@ -321,7 +365,31 @@ export default function CreateMarketPage() {
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                Market created! Registering ENS records...
+                Market created! Claiming subdomain...
+              </div>
+            </div>
+          )}
+
+          {step === 'registering' && (
+            <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-400">
+              <div className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Subdomain claimed! Registering ENS records...
               </div>
             </div>
           )}
@@ -356,17 +424,19 @@ export default function CreateMarketPage() {
             }
             className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 text-lg font-semibold text-white transition-all hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSimulatingENS
-              ? 'Checking ENS availability...'
-              : isSimulating
+            {step === 'checking'
+              ? 'Checking subdomain availability...'
+              : step === 'simulating' || isSimulating
               ? 'Simulating market...'
-              : isCreatingMarket
+              : step === 'creating' || isCreatingMarket
               ? 'Creating Market...'
-              : isRegisteringENS
+              : step === 'claiming' || isClaimingSubdomain
+              ? 'Claiming Subdomain...'
+              : step === 'registering' || isRegisteringENS
               ? 'Registering ENS...'
               : !isConnected
               ? 'Connect Wallet'
-              : simulationError || ensSimulationError
+              : simulationError || subdomainError
               ? 'Retry'
               : isSuccess
               ? 'Market Created!'
