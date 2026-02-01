@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { cn } from "@/lib/utils";
+import { useEthPrice } from "@/hooks";
 
 interface BetPanelProps {
   yesPrice: number;
@@ -13,13 +14,22 @@ interface BetPanelProps {
 
 export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) {
   const { isConnected } = useAccount();
+  const { price: ethPrice } = useEthPrice();
   const [selectedOutcome, setSelectedOutcome] = useState<boolean | null>(null);
   const [amount, setAmount] = useState("");
 
   const potentialWin =
     selectedOutcome !== null && amount
-      ? (parseFloat(amount) / (selectedOutcome ? yesPrice : noPrice)).toFixed(2)
+      ? (parseFloat(amount) / (selectedOutcome ? yesPrice : noPrice)).toFixed(4)
       : "0.00";
+
+  const potentialWinUSD = ethPrice && potentialWin !== "0.00"
+    ? (parseFloat(potentialWin) * ethPrice).toFixed(2)
+    : null;
+
+  const amountUSD = ethPrice && amount
+    ? (parseFloat(amount) * ethPrice).toFixed(2)
+    : null;
 
   const handleBet = () => {
     if (selectedOutcome !== null && amount) {
@@ -64,7 +74,7 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) 
 
       <div className="mb-4">
         <label className="mb-2 block text-sm font-medium text-slate-400">
-          Amount (USDC)
+          Amount (ETH)
         </label>
         <div className="relative">
           <input
@@ -73,23 +83,30 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) 
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             disabled={disabled}
+            step="0.001"
+            min="0"
             className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-lg font-medium text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50"
           />
           <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-slate-500">
-            USDC
+            ETH
           </div>
         </div>
+        {amountUSD && (
+          <div className="mt-1 text-xs text-slate-500">
+            ≈ ${amountUSD}
+          </div>
+        )}
       </div>
 
       <div className="mb-4 flex gap-2">
-        {["10", "25", "50", "100"].map((preset) => (
+        {["0.01", "0.05", "0.1", "0.5"].map((preset) => (
           <button
             key={preset}
             onClick={() => setAmount(preset)}
             disabled={disabled}
             className="flex-1 rounded-lg border border-slate-700 bg-slate-800/50 py-2 text-sm font-medium text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-300 disabled:opacity-50"
           >
-            ${preset}
+            {preset} ETH
           </button>
         ))}
       </div>
@@ -97,9 +114,16 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) 
       <div className="mb-4 rounded-xl bg-slate-800/30 p-4">
         <div className="flex items-center justify-between text-sm">
           <span className="text-slate-500">Potential Win</span>
-          <span className="font-mono text-lg font-semibold text-slate-100">
-            ${potentialWin}
-          </span>
+          <div className="text-right">
+            <span className="font-mono text-lg font-semibold text-slate-100">
+              {potentialWin} ETH
+            </span>
+            {potentialWinUSD && (
+              <div className="text-xs text-slate-500 mt-0.5">
+                ≈ ${potentialWinUSD}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

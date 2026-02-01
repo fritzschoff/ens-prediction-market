@@ -1,18 +1,21 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount } from 'wagmi';
-import { useCreateMarket } from '@/hooks';
+import { useCreateMarket, useRegisterENS } from '@/hooks';
+import { CONTRACTS } from '@/lib/contracts';
 
 export default function CreateMarketPage() {
   const { address, isConnected } = useAccount();
   const [question, setQuestion] = useState(
     'Will I win the ETHGlobal HackMoney Hackathon?'
   );
-  const [ensName, setEnsName] = useState(
-    'ethglobal-hackmoney-hackathon.predict.eth'
-  );
-  const [expiryDays, setExpiryDays] = useState('30');
+  const [ensName, setEnsName] = useState('ethglobal-hackmoney-hackathon');
+  const [expiryDate, setExpiryDate] = useState(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 30);
+    return date.toISOString().slice(0, 16);
+  });
   const [criteria, setCriteria] = useState(
     'Will resolve YES if I win the ETHGlobal HackMoney Hackathon'
   );
@@ -21,37 +24,117 @@ export default function CreateMarketPage() {
     createMarket,
     simulateCreateMarket,
     clearError,
-    isLoading,
+    isLoading: isCreatingMarket,
     isSimulating,
-    isSuccess,
+    isSuccess: isMarketCreated,
     error,
     simulationError,
     marketId,
+    marketResult,
   } = useCreateMarket();
+
+  const {
+    registerENS,
+    simulateENS,
+    isLoading: isRegisteringENS,
+    isSimulating: isSimulatingENS,
+    isSuccess: isENSRegistered,
+    error: ensError,
+    simulationError: ensSimulationError,
+    clearError: clearENSError,
+  } = useRegisterENS();
+
+  const [ensRegistrationTriggered, setEnsRegistrationTriggered] =
+    useState(false);
+  const [ensBaseParams, setEnsBaseParams] = useState<{
+    ensName: string;
+    pool: `0x${string}`;
+    oracle: `0x${string}`;
+    expiry: number;
+    criteria: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (
+      isMarketCreated &&
+      marketResult &&
+      !ensRegistrationTriggered &&
+      ensBaseParams
+    ) {
+      setEnsRegistrationTriggered(true);
+      registerENS({
+        ...ensBaseParams,
+        yesToken: marketResult.yesToken,
+        noToken: marketResult.noToken,
+        creator: marketResult.creator,
+      });
+    }
+  }, [
+    isMarketCreated,
+    marketResult,
+    ensRegistrationTriggered,
+    ensBaseParams,
+    registerENS,
+  ]);
+
+  const isLoading = isCreatingMarket || isRegisteringENS;
+  const isSuccess = isMarketCreated && isENSRegistered;
+  const allSimulating = isSimulating || isSimulatingENS;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!address || !question || !criteria) return;
+    if (!address || !question || !criteria || !ensName) return;
 
-    if (simulationError) {
+    if (simulationError || ensSimulationError) {
       clearError();
+      clearENSError();
     }
 
-    const expiryTimestamp =
-      Math.floor(Date.now() / 1000) + parseInt(expiryDays) * 24 * 60 * 60;
+    const expiryTimestamp = Math.floor(new Date(expiryDate).getTime() / 1000);
 
-    const params = {
+    const fullEnsName = ensName.endsWith('.predict.eth')
+      ? ensName
+      : `${ensName}.predict.eth`;
+
+    const marketParams = {
       question,
       oracle: address,
       expiry: expiryTimestamp,
     };
 
+    const ensParamsForSimulation = {
+      ensName: fullEnsName,
+      pool: CONTRACTS.PREDICTION_HOOK,
+      oracle: address,
+      expiry: expiryTimestamp,
+      criteria,
+      yesToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+      noToken: '0x0000000000000000000000000000000000000000' as `0x${string}`,
+      creator: address,
+    };
+
     try {
-      const simulation = await simulateCreateMarket(params);
-      console.log('simulation', simulation);
-      if (simulation.success) {
-        await createMarket(params, simulation.gas);
+      const ensSimulation = await simulateENS(ensParamsForSimulation);
+      console.log('ENS simulation', ensSimulation);
+
+      if (!ensSimulation.success) {
+        console.error('ENS simulation failed:', ensSimulation.error);
+        return;
+      }
+
+      const marketSimulation = await simulateCreateMarket(marketParams);
+      console.log('Market simulation', marketSimulation);
+
+      if (marketSimulation.success) {
+        setEnsBaseParams({
+          ensName: fullEnsName,
+          pool: CONTRACTS.PREDICTION_HOOK,
+          oracle: address,
+          expiry: expiryTimestamp,
+          criteria,
+        });
+        await createMarket(marketParams, marketSimulation.gas);
       }
     } catch (err) {
       console.error('Failed to create market:', err);
@@ -105,24 +188,39 @@ export default function CreateMarketPage() {
 
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-300">
-              Expiry
+              Expiry Date & Time
             </label>
-            <div className="grid grid-cols-4 gap-3">
-              {['7', '30', '90', '365'].map((days) => (
+            <input
+              type="datetime-local"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="w-full rounded-xl border border-slate-700 bg-slate-800/50 px-4 py-3 text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            />
+            <div className="mt-3 flex gap-2">
+              {[
+                { days: 7, label: '7 days' },
+                { days: 30, label: '30 days' },
+                { days: 90, label: '90 days' },
+                { days: 365, label: '1 year' },
+              ].map(({ days, label }) => (
                 <button
                   key={days}
                   type="button"
-                  onClick={() => setExpiryDays(days)}
-                  className={`rounded-xl border py-3 text-sm font-medium transition-colors ${
-                    expiryDays === days
-                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
-                      : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
-                  }`}
+                  onClick={() => {
+                    const date = new Date();
+                    date.setDate(date.getDate() + days);
+                    setExpiryDate(date.toISOString().slice(0, 16));
+                  }}
+                  className="flex-1 rounded-lg border border-slate-700 bg-slate-800/50 py-2 text-xs font-medium text-slate-400 transition-colors hover:border-indigo-500/50 hover:text-indigo-400"
                 >
-                  {days === '365' ? '1 year' : `${days} days`}
+                  {label}
                 </button>
               ))}
             </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Market will expire at this date and time
+            </p>
           </div>
 
           <div>
@@ -158,15 +256,37 @@ export default function CreateMarketPage() {
             </div>
           </div>
 
-          {(error || simulationError) && (
+          {(error || simulationError || ensError || ensSimulationError) && (
             <div className="break-words rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
-              {simulationError ? (
+              {ensSimulationError ? (
+                <>
+                  <div className="mb-2 font-semibold">
+                    ENS Name Unavailable:
+                  </div>
+                  <div>
+                    {ensSimulationError instanceof Error
+                      ? ensSimulationError.message
+                      : 'ENS name check failed'}
+                  </div>
+                </>
+              ) : simulationError ? (
                 <>
                   <div className="mb-2 font-semibold">Simulation Failed:</div>
                   <div>
                     {simulationError instanceof Error
                       ? simulationError.message
                       : 'Simulation failed'}
+                  </div>
+                </>
+              ) : ensError ? (
+                <>
+                  <div className="mb-2 font-semibold">
+                    ENS Registration Failed:
+                  </div>
+                  <div>
+                    {ensError instanceof Error
+                      ? ensError.message
+                      : 'Failed to register ENS'}
                   </div>
                 </>
               ) : (
@@ -182,9 +302,44 @@ export default function CreateMarketPage() {
             </div>
           )}
 
+          {isMarketCreated && marketId && !isENSRegistered && (
+            <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-400">
+              <div className="flex items-center gap-2">
+                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                Market created! Registering ENS records...
+              </div>
+            </div>
+          )}
+
           {isSuccess && marketId && (
             <div className="rounded-xl border border-green-500/50 bg-green-500/10 p-4 text-sm text-green-400">
-              Market created successfully! Market ID: {marketId.slice(0, 10)}...
+              <div className="font-semibold mb-2">
+                Market created & ENS registered!
+              </div>
+              <div className="space-y-1">
+                <div>Market ID: {marketId.slice(0, 10)}...</div>
+                <div>
+                  ENS:{' '}
+                  {ensName.endsWith('.predict.eth')
+                    ? ensName
+                    : `${ensName}.predict.eth`}
+                </div>
+              </div>
             </div>
           )}
 
@@ -196,19 +351,26 @@ export default function CreateMarketPage() {
               !ensName ||
               !criteria ||
               isLoading ||
-              isSimulating
+              allSimulating ||
+              isSuccess
             }
             className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 text-lg font-semibold text-white transition-all hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSimulating
-              ? 'Simulating...'
-              : isLoading
+            {isSimulatingENS
+              ? 'Checking ENS availability...'
+              : isSimulating
+              ? 'Simulating market...'
+              : isCreatingMarket
               ? 'Creating Market...'
+              : isRegisteringENS
+              ? 'Registering ENS...'
               : !isConnected
               ? 'Connect Wallet'
-              : simulationError
+              : simulationError || ensSimulationError
               ? 'Retry'
-              : 'Create Market'}
+              : isSuccess
+              ? 'Market Created!'
+              : 'Create Market & Register ENS'}
           </button>
         </div>
       </form>

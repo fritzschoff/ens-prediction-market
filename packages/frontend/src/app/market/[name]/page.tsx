@@ -1,60 +1,119 @@
-"use client";
+'use client';
 
-import { BetPanel } from "@/components/BetPanel";
-import { PositionManager } from "@/components/PositionManager";
-import { formatDistanceToNow, shortenAddress } from "@/lib/utils";
+import { BetPanel } from '@/components/BetPanel';
+import { PositionManager } from '@/components/PositionManager';
+import { formatDistanceToNow, shortenAddress } from '@/lib/utils';
+import { useMarketData, useEthPrice, useUserPositions } from '@/hooks';
+import { useAccount, usePublicClient } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { formatEther } from 'viem';
 
 interface MarketPageProps {
   params: { name: string };
 }
 
-const MOCK_MARKET = {
-  id: "1",
-  question: "Will ETH reach $10,000 by end of 2026?",
-  ensName: "eth-10k.predict.eth",
-  expiry: Math.floor(Date.now() / 1000) + 86400 * 365,
-  yesPrice: 0.35,
-  noPrice: 0.65,
-  totalVolume: "$125,430",
-  oracle: "0x1234567890123456789012345678901234567890",
-  creator: "vitalik.eth",
-  criteria: "Market resolves YES if ETH/USD price on Coinbase exceeds $10,000 at any point before December 31, 2026 23:59:59 UTC.",
-  resolved: false,
-};
-
-const MOCK_POSITIONS = [
-  {
-    outcome: true,
-    amount: "100 USDC",
-    avgPrice: 0.32,
-    potentialWin: "312.50",
-  },
-];
-
 export default function MarketPage({ params }: MarketPageProps) {
   const { name } = params;
-  const market = MOCK_MARKET;
+  const { isConnected } = useAccount();
+  const publicClient = usePublicClient();
+  const { market, isLoading, error } = useMarketData(name);
+  const { price: ethPrice } = useEthPrice();
+  const { positions } = useUserPositions(
+    market?.yesToken,
+    market?.noToken,
+    market?.yesPrice || 0.5,
+    market?.noPrice || 0.5,
+    market?.resolved,
+    market?.outcome
+  );
 
   const handleBet = (outcome: boolean, amount: string) => {
-    console.log("Bet placed:", { outcome, amount });
+    console.log('Bet placed:', { outcome, amount });
   };
 
   const handleClaim = () => {
-    console.log("Claiming winnings");
+    console.log('Claiming winnings');
   };
+
+  const totalVolumeUSD =
+    market && ethPrice
+      ? (parseFloat(formatEther(market.totalCollateral)) * ethPrice).toFixed(2)
+      : null;
+
+  if (!isConnected) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-12 text-center">
+          <h2 className="mb-4 text-2xl font-semibold text-slate-100">
+            Connect Your Wallet
+          </h2>
+          <p className="mb-6 text-slate-400">
+            Please connect your wallet to view this market.
+          </p>
+          <ConnectButton />
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="space-y-6">
+          <div className="h-32 animate-pulse rounded-2xl bg-slate-900/50" />
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="lg:col-span-2 space-y-6">
+              <div className="h-64 animate-pulse rounded-2xl bg-slate-900/50" />
+              <div className="h-48 animate-pulse rounded-2xl bg-slate-900/50" />
+            </div>
+            <div className="h-96 animate-pulse rounded-2xl bg-slate-900/50" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !market) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-8 text-center">
+          <h2 className="mb-2 text-xl font-semibold text-red-400">
+            Error Loading Market
+          </h2>
+          <p className="text-sm text-red-400/80">
+            {error?.message || 'Market not found'}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
         <div className="mb-4 flex items-center gap-2 flex-wrap">
-          <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-4 py-1.5 text-sm font-medium text-amber-400 border border-amber-500/20">
-            <span className="h-2 w-2 rounded-full bg-amber-400" />
-            Example
-          </div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-indigo-400">
-            <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
-            {market.ensName}
-          </div>
+          {market.resolved && (
+            <div
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium ${
+                market.outcome
+                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'
+              }`}
+            >
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  market.outcome ? 'bg-emerald-400' : 'bg-rose-400'
+                }`}
+              />
+              Resolved: {market.outcome ? 'YES' : 'NO'}
+            </div>
+          )}
+          {market.ensName && (
+            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-indigo-400">
+              <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
+              {market.ensName}
+            </div>
+          )}
         </div>
         <h1 className="mb-4 text-4xl font-bold text-slate-100">
           {market.question}
@@ -62,7 +121,9 @@ export default function MarketPage({ params }: MarketPageProps) {
         <div className="flex flex-wrap items-center gap-6 text-sm text-slate-400">
           <div className="flex items-center gap-2">
             <span>Created by</span>
-            <span className="font-medium text-slate-300">{market.creator}</span>
+            <span className="font-medium text-slate-300">
+              {shortenAddress(market.creator)}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <span>Oracle</span>
@@ -105,12 +166,16 @@ export default function MarketPage({ params }: MarketPageProps) {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
-            <h2 className="mb-4 text-lg font-semibold text-slate-100">
-              Resolution Criteria
-            </h2>
-            <p className="text-slate-400 leading-relaxed">{market.criteria}</p>
-          </div>
+          {market.criteria && (
+            <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
+              <h2 className="mb-4 text-lg font-semibold text-slate-100">
+                Resolution Criteria
+              </h2>
+              <p className="text-slate-400 leading-relaxed">
+                {market.criteria}
+              </p>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
             <h2 className="mb-4 text-lg font-semibold text-slate-100">
@@ -122,18 +187,53 @@ export default function MarketPage({ params }: MarketPageProps) {
                   {market.totalVolume}
                 </div>
                 <div className="text-sm text-slate-500">Total Volume</div>
+                {totalVolumeUSD && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ≈ ${totalVolumeUSD}
+                  </div>
+                )}
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-100">1,234</div>
-                <div className="text-sm text-slate-500">Trades</div>
+                <div className="text-2xl font-bold text-slate-100">
+                  {formatEther(market.yesSupply)}
+                </div>
+                <div className="text-sm text-slate-500">YES Supply</div>
+                {ethPrice && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ≈ $
+                    {(
+                      parseFloat(formatEther(market.yesSupply)) * ethPrice
+                    ).toFixed(2)}
+                  </div>
+                )}
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-100">89</div>
-                <div className="text-sm text-slate-500">Traders</div>
+                <div className="text-2xl font-bold text-slate-100">
+                  {formatEther(market.noSupply)}
+                </div>
+                <div className="text-sm text-slate-500">NO Supply</div>
+                {ethPrice && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ≈ $
+                    {(
+                      parseFloat(formatEther(market.noSupply)) * ethPrice
+                    ).toFixed(2)}
+                  </div>
+                )}
               </div>
               <div>
-                <div className="text-2xl font-bold text-slate-100">$52,100</div>
-                <div className="text-sm text-slate-500">Liquidity</div>
+                <div className="text-2xl font-bold text-slate-100">
+                  {formatEther(market.totalCollateral)}
+                </div>
+                <div className="text-sm text-slate-500">Total Collateral</div>
+                {ethPrice && (
+                  <div className="text-xs text-slate-500 mt-1">
+                    ≈ $
+                    {(
+                      parseFloat(formatEther(market.totalCollateral)) * ethPrice
+                    ).toFixed(2)}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -147,9 +247,9 @@ export default function MarketPage({ params }: MarketPageProps) {
             disabled={market.resolved}
           />
           <PositionManager
-            positions={MOCK_POSITIONS}
+            positions={positions}
             resolved={market.resolved}
-            winningOutcome={true}
+            winningOutcome={market.outcome}
             onClaim={handleClaim}
           />
         </div>
@@ -157,4 +257,3 @@ export default function MarketPage({ params }: MarketPageProps) {
     </div>
   );
 }
-

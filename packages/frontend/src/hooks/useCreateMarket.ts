@@ -16,6 +16,15 @@ interface CreateMarketParams {
   expiry: number;
 }
 
+export interface MarketCreatedResult {
+  marketId: `0x${string}`;
+  yesToken: Address;
+  noToken: Address;
+  oracle: Address;
+  expiry: bigint;
+  creator: Address;
+}
+
 const MARKET_DEPLOYED_EVENT_ABI = {
   anonymous: false,
   inputs: [
@@ -35,6 +44,9 @@ export function useCreateMarket() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
   const [marketId, setMarketId] = useState<`0x${string}` | null>(null);
+  const [marketResult, setMarketResult] = useState<MarketCreatedResult | null>(
+    null
+  );
   const [error, setError] = useState<Error | null>(null);
   const [gasEstimate, setGasEstimate] = useState<bigint | null>(null);
   const [simulationError, setSimulationError] = useState<Error | null>(null);
@@ -78,7 +90,23 @@ export function useCreateMarket() {
             topics: log.topics,
           });
           if (decoded.eventName === 'MarketDeployed') {
-            setMarketId(decoded.args.marketId as `0x${string}`);
+            const args = decoded.args as {
+              marketId: `0x${string}`;
+              yesToken: Address;
+              noToken: Address;
+              oracle: Address;
+              expiry: bigint;
+              creator: Address;
+            };
+            setMarketId(args.marketId);
+            setMarketResult({
+              marketId: args.marketId,
+              yesToken: args.yesToken,
+              noToken: args.noToken,
+              oracle: args.oracle,
+              expiry: args.expiry,
+              creator: args.creator,
+            });
           }
         }
       } catch (err) {
@@ -332,6 +360,7 @@ export function useCreateMarket() {
     simulateCreateMarket,
     clearError,
     marketId,
+    marketResult,
     hash,
     isLoading,
     isSimulating,

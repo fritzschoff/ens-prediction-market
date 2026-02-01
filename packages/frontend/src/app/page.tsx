@@ -1,47 +1,19 @@
-"use client";
+'use client';
 
-import { MarketCard } from "@/components/MarketCard";
-
-const MOCK_MARKETS = [
-  {
-    id: "1",
-    question: "Will ETH reach $10,000 by end of 2026?",
-    ensName: "eth-10k.predict.eth",
-    expiry: Math.floor(Date.now() / 1000) + 86400 * 365,
-    yesPrice: 0.35,
-    noPrice: 0.65,
-    totalVolume: "$125,430",
-  },
-  {
-    id: "2",
-    question: "Will Bitcoin ETF see $50B AUM by Q2 2026?",
-    ensName: "btc-etf-50b.predict.eth",
-    expiry: Math.floor(Date.now() / 1000) + 86400 * 180,
-    yesPrice: 0.72,
-    noPrice: 0.28,
-    totalVolume: "$89,200",
-  },
-  {
-    id: "3",
-    question: "Will Uniswap v4 surpass v3 in TVL?",
-    ensName: "uni-v4-tvl.predict.eth",
-    expiry: Math.floor(Date.now() / 1000) + 86400 * 90,
-    yesPrice: 0.45,
-    noPrice: 0.55,
-    totalVolume: "$45,800",
-  },
-  {
-    id: "4",
-    question: "Will ENS reach 5M registered names?",
-    ensName: "ens-5m.predict.eth",
-    expiry: Math.floor(Date.now() / 1000) + 86400 * 120,
-    yesPrice: 0.58,
-    noPrice: 0.42,
-    totalVolume: "$32,150",
-  },
-];
+import { MarketCard } from '@/components/MarketCard';
+import { useMarkets } from '@/hooks';
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { formatEther } from 'viem';
 
 export default function HomePage() {
+  const { isConnected } = useAccount();
+  const { markets, isLoading, error, totalCount, refetch } = useMarkets();
+
+  const totalVolume = markets.reduce((sum, market) => {
+    const volume = market.totalCollateral || 0n;
+    return sum + Number(formatEther(volume));
+  }, 0);
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
@@ -54,44 +26,78 @@ export default function HomePage() {
         </p>
       </div>
 
-      <div className="mb-8 flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button className="rounded-full bg-indigo-500/10 px-4 py-2 text-sm font-medium text-indigo-400 transition-colors hover:bg-indigo-500/20">
-            All Markets
-          </button>
-          <button className="rounded-full px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800">
-            Crypto
-          </button>
-          <button className="rounded-full px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800">
-            DeFi
-          </button>
-          <button className="rounded-full px-4 py-2 text-sm font-medium text-slate-400 transition-colors hover:bg-slate-800">
-            NFTs
+      {!isConnected ? (
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-12 text-center">
+          <h2 className="mb-4 text-2xl font-semibold text-slate-100">
+            Connect Your Wallet
+          </h2>
+          <p className="mb-6 text-slate-400">
+            Please connect your wallet to view and interact with prediction
+            markets.
+          </p>
+          <ConnectButton />
+        </div>
+      ) : error ? (
+        <div className="rounded-2xl border border-red-500/50 bg-red-500/10 p-8 text-center">
+          <h2 className="mb-2 text-xl font-semibold text-red-400">
+            Error Loading Markets
+          </h2>
+          <p className="mb-4 text-sm text-red-400/80">{error.message}</p>
+          <button
+            onClick={() => refetch()}
+            className="rounded-xl bg-red-500/20 px-4 py-2 text-sm font-medium text-red-400 transition-colors hover:bg-red-500/30"
+          >
+            Retry
           </button>
         </div>
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Search markets..."
-            className="w-64 rounded-full border border-slate-700 bg-slate-800/50 px-4 py-2 text-sm text-slate-100 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-          />
+      ) : isLoading ? (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-64 animate-pulse rounded-2xl border border-slate-800/50 bg-slate-900/50"
+            />
+          ))}
         </div>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {MOCK_MARKETS.map((market) => (
-          <MarketCard key={market.id} {...market} isExample={true} />
-        ))}
-      </div>
+      ) : markets.length === 0 ? (
+        <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-12 text-center">
+          <h2 className="mb-2 text-xl font-semibold text-slate-100">
+            No Markets Found
+          </h2>
+          <p className="text-slate-400">
+            Be the first to create a prediction market!
+          </p>
+        </div>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {markets.map((market) => (
+            <MarketCard
+              key={market.id}
+              id={market.id}
+              question={market.question}
+              expiry={market.expiry}
+              yesPrice={market.yesPrice || 0.5}
+              noPrice={market.noPrice || 0.5}
+              totalVolume={market.totalVolume || '0 ETH'}
+              resolved={market.resolved}
+              outcome={market.outcome}
+            />
+          ))}
+        </div>
+      )}
 
       <div className="mt-12 rounded-2xl border border-slate-800/50 bg-slate-900/50 p-8">
         <div className="grid gap-8 md:grid-cols-3">
           <div className="text-center">
-            <div className="mb-2 text-4xl font-bold text-gradient">$292K</div>
+            <div className="mb-2 text-4xl font-bold text-gradient">
+              {isLoading ? '...' : `${totalVolume.toFixed(2)} ETH`}
+            </div>
             <div className="text-sm text-slate-500">Total Volume</div>
           </div>
           <div className="text-center">
-            <div className="mb-2 text-4xl font-bold text-gradient">4</div>
+            <div className="mb-2 text-4xl font-bold text-gradient">
+              {isLoading ? '...' : totalCount}
+            </div>
             <div className="text-sm text-slate-500">Active Markets</div>
           </div>
           <div className="text-center">
@@ -103,4 +109,3 @@ export default function HomePage() {
     </div>
   );
 }
-
