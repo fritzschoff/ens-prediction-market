@@ -7,13 +7,27 @@ export const CONTRACTS = {
 
 export const MARKET_FACTORY_ABI = [
   {
+    inputs: [],
+    name: "EmptyQuestion",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "InvalidExpiry",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "InvalidOracle",
+    type: "error",
+  },
+  {
     inputs: [
       {
         components: [
           { name: "question", type: "string" },
           { name: "oracle", type: "address" },
           { name: "expiry", type: "uint256" },
-          { name: "collateralToken", type: "address" },
         ],
         name: "params",
         type: "tuple",

@@ -1,18 +1,60 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useAccount } from "wagmi";
+import { useState } from 'react';
+import { useAccount } from 'wagmi';
+import { useCreateMarket } from '@/hooks';
 
 export default function CreateMarketPage() {
-  const { isConnected } = useAccount();
-  const [question, setQuestion] = useState("");
-  const [ensName, setEnsName] = useState("");
-  const [expiryDays, setExpiryDays] = useState("30");
-  const [criteria, setCriteria] = useState("");
+  const { address, isConnected } = useAccount();
+  const [question, setQuestion] = useState(
+    'Will I win the ETHGlobal HackMoney Hackathon?'
+  );
+  const [ensName, setEnsName] = useState(
+    'ethglobal-hackmoney-hackathon.predict.eth'
+  );
+  const [expiryDays, setExpiryDays] = useState('30');
+  const [criteria, setCriteria] = useState(
+    'Will resolve YES if I win the ETHGlobal HackMoney Hackathon'
+  );
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const {
+    createMarket,
+    simulateCreateMarket,
+    clearError,
+    isLoading,
+    isSimulating,
+    isSuccess,
+    error,
+    simulationError,
+    marketId,
+  } = useCreateMarket();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Creating market:", { question, ensName, expiryDays, criteria });
+
+    if (!address || !question || !criteria) return;
+
+    if (simulationError) {
+      clearError();
+    }
+
+    const expiryTimestamp =
+      Math.floor(Date.now() / 1000) + parseInt(expiryDays) * 24 * 60 * 60;
+
+    const params = {
+      question,
+      oracle: address,
+      expiry: expiryTimestamp,
+    };
+
+    try {
+      const simulation = await simulateCreateMarket(params);
+      if (simulation.success && simulation.gas) {
+        await createMarket(params, simulation.gas);
+      }
+    } catch (err) {
+      console.error('Failed to create market:', err);
+    }
   };
 
   return (
@@ -65,18 +107,18 @@ export default function CreateMarketPage() {
               Expiry
             </label>
             <div className="grid grid-cols-4 gap-3">
-              {["7", "30", "90", "365"].map((days) => (
+              {['7', '30', '90', '365'].map((days) => (
                 <button
                   key={days}
                   type="button"
                   onClick={() => setExpiryDays(days)}
                   className={`rounded-xl border py-3 text-sm font-medium transition-colors ${
                     expiryDays === days
-                      ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
-                      : "border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600"
+                      ? 'border-indigo-500 bg-indigo-500/10 text-indigo-400'
+                      : 'border-slate-700 bg-slate-800/50 text-slate-400 hover:border-slate-600'
                   }`}
                 >
-                  {days === "365" ? "1 year" : `${days} days`}
+                  {days === '365' ? '1 year' : `${days} days`}
                 </button>
               ))}
             </div>
@@ -106,7 +148,7 @@ export default function CreateMarketPage() {
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">Initial Liquidity</span>
-                <span className="text-slate-300">100 USDC (required)</span>
+                <span className="text-slate-300">ETH (optional)</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">ENS Registration</span>
@@ -115,12 +157,57 @@ export default function CreateMarketPage() {
             </div>
           </div>
 
+          {(error || simulationError) && (
+            <div className="break-words rounded-xl border border-red-500/50 bg-red-500/10 p-4 text-sm text-red-400">
+              {simulationError ? (
+                <>
+                  <div className="mb-2 font-semibold">Simulation Failed:</div>
+                  <div>
+                    {simulationError instanceof Error
+                      ? simulationError.message
+                      : 'Simulation failed'}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="mb-2 font-semibold">Error:</div>
+                  <div>
+                    {error instanceof Error
+                      ? error.message
+                      : 'Failed to create market'}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {isSuccess && marketId && (
+            <div className="rounded-xl border border-green-500/50 bg-green-500/10 p-4 text-sm text-green-400">
+              Market created successfully! Market ID: {marketId.slice(0, 10)}...
+            </div>
+          )}
+
           <button
             type="submit"
-            disabled={!isConnected || !question || !ensName || !criteria}
+            disabled={
+              !isConnected ||
+              !question ||
+              !ensName ||
+              !criteria ||
+              isLoading ||
+              isSimulating
+            }
             className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-4 text-lg font-semibold text-white transition-all hover:from-indigo-600 hover:to-purple-600 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {!isConnected ? "Connect Wallet" : "Create Market"}
+            {isSimulating
+              ? 'Simulating...'
+              : isLoading
+              ? 'Creating Market...'
+              : !isConnected
+              ? 'Connect Wallet'
+              : simulationError
+              ? 'Retry'
+              : 'Create Market'}
           </button>
         </div>
       </form>
@@ -167,4 +254,3 @@ export default function CreateMarketPage() {
     </div>
   );
 }
-
