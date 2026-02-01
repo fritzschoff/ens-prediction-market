@@ -3,6 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "generate-contracts": "tsx scripts/generate-contracts.ts",
+    "predev": "pnpm generate-contracts",
+    "prebuild": "pnpm generate-contracts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -27,7 +30,7 @@
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
+    "tsx": "^4.21.0",
     "typescript": "^5.3.3"
   }
 }
-

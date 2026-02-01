@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { formatDistanceToNow } from "@/lib/utils";
+import Link from 'next/link';
+import { formatDistanceToNow } from '@/lib/utils';
 
 interface MarketCardProps {
   id: string;
@@ -60,11 +60,11 @@ export function MarketCard({
               <span
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-medium ${
                   outcome
-                    ? "bg-emerald-500/10 text-emerald-400"
-                    : "bg-rose-500/10 text-rose-400"
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-rose-500/10 text-rose-400'
                 }`}
               >
-                Resolved: {outcome ? "YES" : "NO"}
+                Resolved: {outcome ? 'YES' : 'NO'}
               </span>
             </div>
           ) : (
@@ -92,11 +92,11 @@ export function MarketCard({
           </div>
           <div className="mt-2 flex items-center justify-between text-sm">
             <span className="text-slate-500">
-              {isExpired ? "Expired" : "Expires"}
+              {isExpired ? 'Expired' : 'Expires'}
             </span>
             <span
               className={`font-medium ${
-                isExpired ? "text-rose-400" : "text-slate-300"
+                isExpired ? 'text-rose-400' : 'text-slate-300'
               }`}
             >
               {formatDistanceToNow(expiry)}
@@ -107,4 +107,3 @@ export function MarketCard({
     </Link>
   );
 }
-

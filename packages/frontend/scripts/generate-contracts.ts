@@ -1,8 +1,54 @@
-import { Address } from "viem";
+import { readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
+
+const BROADCAST_PATH = join(
+  process.cwd(),
+  '../uniswap-v4/broadcast/Deploy.s.sol/11155111/run-latest.json'
+);
+
+const OUTPUT_PATH = join(process.cwd(), 'src/lib/contracts.ts');
+
+interface BroadcastTransaction {
+  contractName: string;
+  contractAddress: string;
+  transactionType: string;
+}
+
+interface BroadcastData {
+  transactions: BroadcastTransaction[];
+}
+
+function extractAddresses(broadcastData: BroadcastData) {
+  const addresses: Record<string, string> = {};
+
+  for (const tx of broadcastData.transactions) {
+    if (tx.contractName === 'PredictionMarketHook') {
+      addresses.PREDICTION_HOOK = tx.contractAddress;
+    } else if (tx.contractName === 'MarketFactory') {
+      addresses.MARKET_FACTORY = tx.contractAddress;
+    }
+  }
+
+  return addresses;
+}
+
+try {
+  const broadcastContent = readFileSync(BROADCAST_PATH, 'utf-8');
+  const broadcastData: BroadcastData = JSON.parse(broadcastContent);
+
+  const addresses = extractAddresses(broadcastData);
+
+  if (!addresses.MARKET_FACTORY || !addresses.PREDICTION_HOOK) {
+    throw new Error(
+      'Could not find required contract addresses in broadcast file'
+    );
+  }
+
+  const contractsFile = `import { Address } from "viem";
 
 export const CONTRACTS = {
-  MARKET_FACTORY: "0x3e79a831ed0d4fad23f82b089a016757171f91b2" as Address,
-  PREDICTION_HOOK: "0xd6adfd7237bbbeacb3b26c73920e36d472b37ac0" as Address,
+  MARKET_FACTORY: "${addresses.MARKET_FACTORY}" as Address,
+  PREDICTION_HOOK: "${addresses.PREDICTION_HOOK}" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [
@@ -145,3 +191,13 @@ export const PREDICTION_HOOK_ABI = [
     type: "function",
   },
 ] as const;
+`;
+
+  writeFileSync(OUTPUT_PATH, contractsFile, 'utf-8');
+  console.log('✅ Generated contracts.ts from broadcast file');
+  console.log(`   MARKET_FACTORY: ${addresses.MARKET_FACTORY}`);
+  console.log(`   PREDICTION_HOOK: ${addresses.PREDICTION_HOOK}`);
+} catch (error) {
+  console.error('❌ Error generating contracts:', error);
+  process.exit(1);
+}
