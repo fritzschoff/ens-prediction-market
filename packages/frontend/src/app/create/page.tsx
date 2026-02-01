@@ -49,7 +49,8 @@ export default function CreateMarketPage() {
 
     try {
       const simulation = await simulateCreateMarket(params);
-      if (simulation.success && simulation.gas) {
+      console.log('simulation', simulation);
+      if (simulation.success) {
         await createMarket(params, simulation.gas);
       }
     } catch (err) {
@@ -143,12 +144,12 @@ export default function CreateMarketPage() {
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-500">Creation Fee</span>
-                <span className="text-slate-300">0.01 ETH</span>
+                <span className="text-slate-500">Collateral</span>
+                <span className="text-slate-300">ETH</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Initial Liquidity</span>
-                <span className="text-slate-300">ETH (optional)</span>
+                <span className="text-slate-500">Creation Fee</span>
+                <span className="text-slate-300">Free</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-slate-500">ENS Registration</span>

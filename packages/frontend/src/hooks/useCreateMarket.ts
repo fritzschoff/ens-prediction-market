@@ -157,7 +157,7 @@ export function useCreateMarket() {
                 if (typeof data === 'string' && data.startsWith('0x')) {
                   const errorSelector = data.slice(0, 10).toLowerCase();
                   const selectorMap: Record<string, string> = {
-                    '0xd1ef4cea': 'InvalidOracle',
+                    '0x9589a27d': 'InvalidOracle',
                     '0x72b13ad8': 'InvalidExpiry',
                     '0x6d705ebb': 'EmptyQuestion',
                   };
@@ -226,7 +226,6 @@ export function useCreateMarket() {
         let gas: bigint | undefined = simulationGas
           ? (simulationGas * BigInt(120)) / BigInt(100)
           : undefined;
-
         if (!gas) {
           try {
             const estimatedGas = await publicClient.estimateContractGas({
@@ -290,7 +289,7 @@ export function useCreateMarket() {
                 if (typeof data === 'string' && data.startsWith('0x')) {
                   const errorSelector = data.slice(0, 10).toLowerCase();
                   const selectorMap: Record<string, string> = {
-                    '0xd1ef4cea': 'InvalidOracle',
+                    '0x9589a27d': 'InvalidOracle',
                     '0x72b13ad8': 'InvalidExpiry',
                     '0x6d705ebb': 'EmptyQuestion',
                   };
