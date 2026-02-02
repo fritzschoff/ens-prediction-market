@@ -1,31 +1,90 @@
+import { namehash, labelhash, Address, encodeFunctionData } from 'viem';
+import { PartialMarketRecords } from './types';
 import {
-  namehash,
-  Address,
-  encodeFunctionData,
-} from "viem";
-import { PartialMarketRecords } from "./types";
-import { MARKET_RECORD_KEYS, ENS_PUBLIC_RESOLVER_SEPOLIA } from "./constants";
+  MARKET_RECORD_KEYS,
+  ENS_PUBLIC_RESOLVER_SEPOLIA,
+  ENS_REGISTRY_ADDRESS,
+} from './constants';
 
 const resolverAbi = [
   {
     inputs: [
-      { name: "node", type: "bytes32" },
-      { name: "key", type: "string" },
-      { name: "value", type: "string" },
+      { name: 'node', type: 'bytes32' },
+      { name: 'key', type: 'string' },
+      { name: 'value', type: 'string' },
     ],
-    name: "setText",
+    name: 'setText',
     outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
   {
-    inputs: [{ name: "data", type: "bytes[]" }],
-    name: "multicall",
-    outputs: [{ name: "results", type: "bytes[]" }],
-    stateMutability: "nonpayable",
-    type: "function",
+    inputs: [{ name: 'data', type: 'bytes[]' }],
+    name: 'multicall',
+    outputs: [{ name: 'results', type: 'bytes[]' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
   },
 ] as const;
+
+const ensRegistryAbi = [
+  {
+    inputs: [
+      { name: 'node', type: 'bytes32' },
+      { name: 'label', type: 'bytes32' },
+      { name: 'owner', type: 'address' },
+      { name: 'resolver', type: 'address' },
+      { name: 'ttl', type: 'uint64' },
+    ],
+    name: 'setSubnodeRecord',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'node', type: 'bytes32' }],
+    name: 'owner',
+    outputs: [{ name: '', type: 'address' }],
+    stateMutability: 'view',
+    type: 'function',
+  },
+] as const;
+
+export interface CreateSubdomainParams {
+  parentName: string;
+  label: string;
+  owner: Address;
+  resolverAddress?: Address;
+}
+
+export function encodeCreateSubdomain(params: CreateSubdomainParams): {
+  to: Address;
+  data: `0x${string}`;
+} {
+  const parentNode = namehash(params.parentName);
+  const label = labelhash(params.label);
+  const resolverAddress = params.resolverAddress ?? ENS_PUBLIC_RESOLVER_SEPOLIA;
+
+  const data = encodeFunctionData({
+    abi: ensRegistryAbi,
+    functionName: 'setSubnodeRecord',
+    args: [parentNode, label, params.owner, resolverAddress, BigInt(0)],
+  });
+
+  return {
+    to: ENS_REGISTRY_ADDRESS,
+    data,
+  };
+}
+
+export function getSubdomainNode(
+  parentName: string,
+  label: string
+): `0x${string}` {
+  return namehash(`${label}.${parentName}`);
+}
+
+export { ensRegistryAbi };
 
 export interface SetTextRecordParams {
   name: string;
@@ -43,7 +102,7 @@ export function encodeSetTextRecord(params: SetTextRecordParams): {
 
   const data = encodeFunctionData({
     abi: resolverAbi,
-    functionName: "setText",
+    functionName: 'setText',
     args: [node, params.key, params.value],
   });
 
@@ -72,7 +131,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.pool, params.records.pool],
       })
     );
@@ -82,7 +141,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.oracle, params.records.oracle],
       })
     );
@@ -92,8 +151,12 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
-        args: [node, MARKET_RECORD_KEYS.expiry, params.records.expiry.toString()],
+        functionName: 'setText',
+        args: [
+          node,
+          MARKET_RECORD_KEYS.expiry,
+          params.records.expiry.toString(),
+        ],
       })
     );
   }
@@ -102,7 +165,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.criteria, params.records.criteria],
       })
     );
@@ -112,7 +175,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.yesToken, params.records.yesToken],
       })
     );
@@ -122,7 +185,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.noToken, params.records.noToken],
       })
     );
@@ -132,7 +195,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     calls.push(
       encodeFunctionData({
         abi: resolverAbi,
-        functionName: "setText",
+        functionName: 'setText',
         args: [node, MARKET_RECORD_KEYS.creator, params.records.creator],
       })
     );
@@ -140,7 +203,7 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
 
   const data = encodeFunctionData({
     abi: resolverAbi,
-    functionName: "multicall",
+    functionName: 'multicall',
     args: [calls],
   });
 
@@ -166,4 +229,3 @@ export function marketRecordsToTextRecords(
 
   return result;
 }
-

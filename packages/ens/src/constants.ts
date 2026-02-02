@@ -4,6 +4,11 @@ export const ENS_REGISTRY_ADDRESS =
 export const ENS_PUBLIC_RESOLVER_SEPOLIA =
   '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD' as const;
 
+export const PREDICT_ETH_PARENT = 'predict.eth' as const;
+
+export const PREDICT_ETH_OWNER =
+  '0xA8DF87507994618e1CefE3E4bBCaf9fB612127CC' as const;
+
 export const MARKET_RECORD_KEYS = {
   pool: 'pool',
   oracle: 'oracle',
