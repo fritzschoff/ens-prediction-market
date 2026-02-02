@@ -104,16 +104,6 @@ forge test --match-contract PrivateBettingHookTest -vvv
 pnpm dev
 ```
 
-## Test Coverage
-
-| Test Suite               | Tests  | Description                |
-| ------------------------ | ------ | -------------------------- |
-| PrivateBettingHookTest   | 14     | Privacy commit-reveal flow |
-| PredictionMarketHookTest | 14     | Standard market operations |
-| MarketFactoryTest        | 8      | Market creation            |
-| OutcomeTokenTest         | 6      | Token mint/burn            |
-| **Total**                | **42** | All passing                |
-
 ## Packages
 
 - [ENS Integration](./packages/ens/README.md) - Text record schema and utilities
