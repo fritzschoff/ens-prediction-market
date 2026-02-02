@@ -201,6 +201,16 @@ export function encodeSetMarketRecords(params: SetMarketRecordsParams): {
     );
   }
 
+  if (params.records.marketId) {
+    calls.push(
+      encodeFunctionData({
+        abi: resolverAbi,
+        functionName: 'setText',
+        args: [node, MARKET_RECORD_KEYS.marketId, params.records.marketId],
+      })
+    );
+  }
+
   const data = encodeFunctionData({
     abi: resolverAbi,
     functionName: 'multicall',
@@ -226,6 +236,7 @@ export function marketRecordsToTextRecords(
   if (records.yesToken) result[MARKET_RECORD_KEYS.yesToken] = records.yesToken;
   if (records.noToken) result[MARKET_RECORD_KEYS.noToken] = records.noToken;
   if (records.creator) result[MARKET_RECORD_KEYS.creator] = records.creator;
+  if (records.marketId) result[MARKET_RECORD_KEYS.marketId] = records.marketId;
 
   return result;
 }

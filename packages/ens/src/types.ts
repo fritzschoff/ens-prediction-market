@@ -8,6 +8,7 @@ export interface MarketRecords {
   yesToken: Address;
   noToken: Address;
   creator: string;
+  marketId?: string;
 }
 
 export interface PartialMarketRecords {
@@ -18,6 +19,7 @@ export interface PartialMarketRecords {
   yesToken?: Address;
   noToken?: Address;
   creator?: string;
+  marketId?: string;
 }
 
 export interface ENSResolverConfig {

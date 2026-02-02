@@ -85,6 +85,7 @@ export async function getMarketRecords(
         break;
       case "criteria":
       case "creator":
+      case "marketId":
         records[key] = value;
         break;
     }

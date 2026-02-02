@@ -17,6 +17,7 @@ export const MARKET_RECORD_KEYS = {
   yesToken: 'yesToken',
   noToken: 'noToken',
   creator: 'creator',
+  marketId: 'marketId',
 } as const;
 
 export const SUPPORTED_CHAINS = {
