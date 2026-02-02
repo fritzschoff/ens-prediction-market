@@ -83,18 +83,24 @@ export function useMarketData(nameOrId: string) {
       if (nameOrId.startsWith('0x') && nameOrId.length === 66) {
         marketId = nameOrId;
       } else {
-        const ensName = nameOrId.includes('.') ? nameOrId : `${nameOrId}.predict.eth`;
-        
+        const ensName = nameOrId.includes('.')
+          ? nameOrId
+          : `${nameOrId}.predict.eth`;
+
         const foundMarketId = await publicClient.readContract({
           address: CONTRACTS.MARKET_FACTORY,
           abi: MARKET_FACTORY_ABI,
           functionName: 'getMarketByENS',
           args: [ensName],
         });
-        
-        if (!foundMarketId || foundMarketId === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+
+        if (
+          !foundMarketId ||
+          foundMarketId ===
+            '0x0000000000000000000000000000000000000000000000000000000000000000'
+        ) {
           ensRecords = await resolveMarketFromENS(publicClient, ensName);
-          
+
           if (!ensRecords) {
             throw new Error(`Market not found for ENS name: ${ensName}`);
           }
@@ -125,7 +131,8 @@ export function useMarketData(nameOrId: string) {
               });
 
               if (
-                info.yesToken.toLowerCase() === ensRecords.yesToken?.toLowerCase() &&
+                info.yesToken.toLowerCase() ===
+                  ensRecords.yesToken?.toLowerCase() &&
                 info.noToken.toLowerCase() === ensRecords.noToken?.toLowerCase()
               ) {
                 legacyMarketId = id;
@@ -251,4 +258,3 @@ export function useMarketData(nameOrId: string) {
     refetch: fetchMarket,
   };
 }
-

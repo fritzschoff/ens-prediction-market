@@ -28,26 +28,26 @@ export default function MarketPage({ params }: MarketPageProps) {
   );
 
   const {
-    mintPosition,
+    placeBet,
     claimWinnings,
-    isMinting,
+    isBetting,
     isClaiming,
-    isMintSuccess,
+    isBetSuccess,
     isClaimSuccess,
-    mintError,
+    betError,
     claimError,
   } = useBetActions(market?.poolKey);
 
   useEffect(() => {
-    if (isMintSuccess || isClaimSuccess) {
+    if (isBetSuccess || isClaimSuccess) {
       refetch();
       refetchPositions();
     }
-  }, [isMintSuccess, isClaimSuccess, refetch, refetchPositions]);
+  }, [isBetSuccess, isClaimSuccess, refetch, refetchPositions]);
 
   const handleBet = async (outcome: boolean, amount: string) => {
     try {
-      await mintPosition(amount);
+      await placeBet(amount, outcome);
     } catch (err) {
       console.error('Bet failed:', err);
     }
@@ -287,8 +287,8 @@ export default function MarketPage({ params }: MarketPageProps) {
             noPrice={market.noPrice}
             onBet={handleBet}
             disabled={market.resolved}
-            isLoading={isMinting}
-            error={mintError}
+            isLoading={isBetting}
+            error={betError}
           />
           <PositionManager
             positions={positions}

@@ -1,8 +1,8 @@
 import { Address } from "viem";
 
 export const CONTRACTS = {
-  MARKET_FACTORY: "0xd968096248fefc280962da52c62af5f2268614d9" as Address,
-  PREDICTION_HOOK: "0xf789ced3e90f3284a3a5c0cb8e6e865abfb23ac0" as Address,
+  MARKET_FACTORY: "0x5ab4d6d9c05f28bff69ad48cab9d119803ac7a16" as Address,
+  PREDICTION_HOOK: "0x3e59cd5f19ba3affdd77aaf2cb7a1a72282e3ac0" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [
@@ -200,8 +200,9 @@ export const PREDICTION_HOOK_ABI = [
         name: "key",
         type: "tuple",
       },
+      { name: "outcome", type: "bool" },
     ],
-    name: "mintPosition",
+    name: "betOnOutcome",
     outputs: [],
     stateMutability: "payable",
     type: "function",

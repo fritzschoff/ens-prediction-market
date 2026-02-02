@@ -132,8 +132,8 @@ export function useBetActions(poolKey: PoolKey | undefined) {
     hash: claimTxHash,
   });
 
-  const mintPosition = useCallback(
-    async (amountEth: string) => {
+  const placeBet = useCallback(
+    async (amountEth: string, outcome: boolean) => {
       if (!isConnected || !address || !publicClient || !poolKey) {
         throw new Error('Wallet not connected or market not loaded');
       }
@@ -159,8 +159,8 @@ export function useBetActions(poolKey: PoolKey | undefined) {
         await publicClient.simulateContract({
           address: CONTRACTS.PREDICTION_HOOK,
           abi: PREDICTION_HOOK_ABI,
-          functionName: 'mintPosition',
-          args: [poolKeyArg],
+          functionName: 'betOnOutcome',
+          args: [poolKeyArg, outcome],
           value,
           account: address,
         });
@@ -168,8 +168,8 @@ export function useBetActions(poolKey: PoolKey | undefined) {
         writeMint({
           address: CONTRACTS.PREDICTION_HOOK,
           abi: PREDICTION_HOOK_ABI,
-          functionName: 'mintPosition',
-          args: [poolKeyArg],
+          functionName: 'betOnOutcome',
+          args: [poolKeyArg, outcome],
           value,
         });
 
@@ -231,16 +231,16 @@ export function useBetActions(poolKey: PoolKey | undefined) {
   }, [resetMint, resetClaim]);
 
   return {
-    mintPosition,
+    placeBet,
     claimWinnings,
     clearErrors,
-    isMinting: isMintPending || isMintConfirming,
+    isBetting: isMintPending || isMintConfirming,
     isClaiming: isClaimPending || isClaimConfirming,
-    isMintSuccess,
+    isBetSuccess: isMintSuccess,
     isClaimSuccess,
-    mintHash: mintTxHash,
+    betHash: mintTxHash,
     claimHash: claimTxHash,
-    mintError: state.mintError || mintWriteError,
+    betError: state.mintError || mintWriteError,
     claimError: state.claimError || claimWriteError,
     isConnected,
   };
