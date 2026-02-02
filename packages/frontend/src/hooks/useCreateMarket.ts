@@ -14,6 +14,7 @@ interface CreateMarketParams {
   question: string;
   oracle: Address;
   expiry: number;
+  ensName: string;
 }
 
 export interface MarketCreatedResult {
@@ -23,6 +24,7 @@ export interface MarketCreatedResult {
   oracle: Address;
   expiry: bigint;
   creator: Address;
+  ensName: string;
 }
 
 const MARKET_DEPLOYED_EVENT_ABI = {
@@ -35,6 +37,7 @@ const MARKET_DEPLOYED_EVENT_ABI = {
     { indexed: false, name: 'oracle', type: 'address' },
     { indexed: false, name: 'expiry', type: 'uint256' },
     { indexed: false, name: 'creator', type: 'address' },
+    { indexed: false, name: 'ensName', type: 'string' },
   ],
   name: 'MarketDeployed',
   type: 'event',
@@ -97,6 +100,7 @@ export function useCreateMarket() {
               oracle: Address;
               expiry: bigint;
               creator: Address;
+              ensName: string;
             };
             setMarketId(args.marketId);
             setMarketResult({
@@ -106,6 +110,7 @@ export function useCreateMarket() {
               oracle: args.oracle,
               expiry: args.expiry,
               creator: args.creator,
+              ensName: args.ensName,
             });
           }
         }
@@ -133,6 +138,7 @@ export function useCreateMarket() {
             question: params.question,
             oracle: params.oracle,
             expiry: BigInt(params.expiry),
+            ensName: params.ensName,
           },
         ] as const;
 
@@ -160,6 +166,7 @@ export function useCreateMarket() {
           InvalidExpiry: 'Invalid expiry time. Expiry must be in the future.',
           EmptyQuestion:
             'Question cannot be empty. Please provide a question for the market.',
+          ENSNameTaken: 'This ENS name is already taken by another market.',
         };
 
         try {
@@ -248,6 +255,7 @@ export function useCreateMarket() {
             question: params.question,
             oracle: params.oracle,
             expiry: BigInt(params.expiry),
+            ensName: params.ensName,
           },
         ] as const;
 
@@ -292,6 +300,7 @@ export function useCreateMarket() {
           InvalidExpiry: 'Invalid expiry time. Expiry must be in the future.',
           EmptyQuestion:
             'Question cannot be empty. Please provide a question for the market.',
+          ENSNameTaken: 'This ENS name is already taken by another market.',
         };
 
         try {

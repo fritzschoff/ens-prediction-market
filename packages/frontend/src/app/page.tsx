@@ -1,6 +1,7 @@
 'use client';
 
 import { MarketCard } from '@/components/MarketCard';
+import { MarketCardSkeleton } from '@/components/MarketCardSkeleton';
 import { useMarkets } from '@/hooks';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
@@ -14,6 +15,7 @@ export default function HomePage() {
     const volume = market.totalCollateral || 0n;
     return sum + Number(formatEther(volume));
   }, 0);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-12 text-center">
@@ -53,10 +55,7 @@ export default function HomePage() {
       ) : isLoading ? (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div
-              key={i}
-              className="h-64 animate-pulse rounded-2xl border border-slate-800/50 bg-slate-900/50"
-            />
+            <MarketCardSkeleton key={i} />
           ))}
         </div>
       ) : markets.length === 0 ? (
@@ -75,6 +74,7 @@ export default function HomePage() {
               key={market.id}
               id={market.id}
               question={market.question}
+              ensName={market.ensName}
               expiry={market.expiry}
               yesPrice={market.yesPrice || 0.5}
               noPrice={market.noPrice || 0.5}
@@ -101,8 +101,27 @@ export default function HomePage() {
             <div className="text-sm text-slate-500">Active Markets</div>
           </div>
           <div className="text-center">
-            <div className="mb-2 text-4xl font-bold text-gradient">0</div>
-            <div className="text-sm text-slate-500">Gas Fees Paid</div>
+            <div className="mb-2 text-4xl font-bold text-gradient">
+              {isLoading ? '...' : markets.filter(m => m.ensName).length}
+            </div>
+            <div className="text-sm text-slate-500">ENS-Named Markets</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-8 rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-500/5 to-purple-500/5 p-6">
+        <div className="flex items-start gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20">
+            <svg className="h-6 w-6 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-100 mb-2">ENS-Powered Discovery</h3>
+            <p className="text-sm text-slate-400 leading-relaxed">
+              Markets are linked to ENS domains like <span className="text-indigo-400 font-medium">yourmarket.predict.eth</span>. 
+              This makes markets easy to find, share, and verify. Create a market to get your own ENS subdomain!
+            </p>
           </div>
         </div>
       </div>

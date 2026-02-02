@@ -1,8 +1,8 @@
 import { Address } from "viem";
 
 export const CONTRACTS = {
-  MARKET_FACTORY: "0x8bbabc6e555b8591d7e1609afc60d18ee45782ff" as Address,
-  PREDICTION_HOOK: "0xb2f41770eee9fe25b2051dd1eae1aeadc0457ac0" as Address,
+  MARKET_FACTORY: "0xd968096248fefc280962da52c62af5f2268614d9" as Address,
+  PREDICTION_HOOK: "0xf789ced3e90f3284a3a5c0cb8e6e865abfb23ac0" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [
@@ -22,12 +22,23 @@ export const MARKET_FACTORY_ABI = [
     type: "error",
   },
   {
+    inputs: [],
+    name: "NotMarketCreator",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "ENSNameTaken",
+    type: "error",
+  },
+  {
     inputs: [
       {
         components: [
           { name: "question", type: "string" },
           { name: "oracle", type: "address" },
           { name: "expiry", type: "uint256" },
+          { name: "ensName", type: "string" },
         ],
         name: "params",
         type: "tuple",
@@ -61,6 +72,7 @@ export const MARKET_FACTORY_ABI = [
           { name: "oracle", type: "address" },
           { name: "expiry", type: "uint256" },
           { name: "creator", type: "address" },
+          { name: "ensName", type: "string" },
         ],
         name: "",
         type: "tuple",
@@ -79,6 +91,23 @@ export const MARKET_FACTORY_ABI = [
   {
     inputs: [{ name: "index", type: "uint256" }],
     name: "getMarketIdAt",
+    outputs: [{ name: "", type: "bytes32" }],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      { name: "marketId", type: "bytes32" },
+      { name: "ensName", type: "string" },
+    ],
+    name: "setENSName",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [{ name: "ensName", type: "string" }],
+    name: "getMarketByENS",
     outputs: [{ name: "", type: "bytes32" }],
     stateMutability: "view",
     type: "function",
@@ -156,6 +185,25 @@ export const PREDICTION_HOOK_ABI = [
     name: "claimWinnings",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        components: [
+          { name: "currency0", type: "address" },
+          { name: "currency1", type: "address" },
+          { name: "fee", type: "uint24" },
+          { name: "tickSpacing", type: "int24" },
+          { name: "hooks", type: "address" },
+        ],
+        name: "key",
+        type: "tuple",
+      },
+    ],
+    name: "mintPosition",
+    outputs: [],
+    stateMutability: "payable",
     type: "function",
   },
 ] as const;

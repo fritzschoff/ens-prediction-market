@@ -3,6 +3,7 @@ import {
   createWalletClient,
   createPublicClient,
   http,
+  fallback,
   namehash,
   labelhash,
   parseAbi,
@@ -17,6 +18,23 @@ const PREDICT_ETH_OWNER_KEY =
 const ENS_REGISTRY = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e';
 const PUBLIC_RESOLVER_SEPOLIA = '0x8FADE66B79cC9f707aB26799354482EB93a5B7dD';
 const PREDICT_ETH_PARENT = 'predict.eth';
+
+const sepoliaRpcUrl = process.env.NEXT_PUBLIC_SEPOLIA_RPC_URL;
+
+function getSepoliaTransport() {
+  const rpcs = [
+    sepoliaRpcUrl,
+    'https://rpc.sepolia.org',
+    'https://ethereum-sepolia-rpc.publicnode.com',
+    'https://sepolia.drpc.org',
+  ].filter(Boolean) as string[];
+
+  return fallback(
+    rpcs.map((url, i) =>
+      http(url, { batch: true, retryCount: 1, retryDelay: i === 0 ? 300 : 500 })
+    )
+  );
+}
 
 const ensRegistryAbi = parseAbi([
   'function setSubnodeRecord(bytes32 node, bytes32 label, address owner, address resolver, uint64 ttl) external',
@@ -33,19 +51,29 @@ export interface ClaimSubdomainResult {
   subdomain?: string;
   node?: `0x${string}`;
   txHash?: `0x${string}`;
+  blockNumber?: bigint;
   error?: string;
+}
+
+export interface ClaimSubdomainProgress {
+  stage: 'preparing' | 'creating' | 'tx-sent' | 'confirming' | 'complete';
+  subdomain?: string;
+  newOwner?: `0x${string}`;
+  txHash?: `0x${string}`;
+  blockNumber?: bigint;
 }
 
 export function useClaimSubdomain() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [progress, setProgress] = useState<ClaimSubdomainProgress | null>(null);
   const wagmiPublicClient = usePublicClient();
 
   const checkSubdomainAvailability = useCallback(
     async (label: string): Promise<boolean> => {
       const publicClient = createPublicClient({
         chain: sepolia,
-        transport: http(),
+        transport: getSepoliaTransport(),
       });
 
       const subdomainNode = namehash(`${label}.${PREDICT_ETH_PARENT}`);
@@ -70,6 +98,7 @@ export function useClaimSubdomain() {
     async (params: ClaimSubdomainParams): Promise<ClaimSubdomainResult> => {
       setIsLoading(true);
       setError(null);
+      setProgress({ stage: 'preparing' });
 
       try {
         const isAvailable = await checkSubdomainAvailability(params.label);
@@ -79,6 +108,7 @@ export function useClaimSubdomain() {
           );
           setError(error);
           setIsLoading(false);
+          setProgress(null);
           return {
             success: false,
             error: error.message,
@@ -91,13 +121,13 @@ export function useClaimSubdomain() {
 
         const publicClient = createPublicClient({
           chain: sepolia,
-          transport: http(),
+          transport: getSepoliaTransport(),
         });
 
         const walletClient = createWalletClient({
           account: ownerAccount,
           chain: sepolia,
-          transport: http(),
+          transport: getSepoliaTransport(),
         });
 
         const parentNode = namehash(PREDICT_ETH_PARENT);
@@ -105,6 +135,11 @@ export function useClaimSubdomain() {
         const subdomain = `${params.label}.${PREDICT_ETH_PARENT}`;
         const subdomainNode = namehash(subdomain);
 
+        setProgress({
+          stage: 'creating',
+          subdomain,
+          newOwner: params.newOwner,
+        });
         console.log('Creating subdomain:', subdomain);
         console.log('Assigning to:', params.newOwner);
 
@@ -121,10 +156,31 @@ export function useClaimSubdomain() {
           ],
         });
 
+        setProgress({
+          stage: 'tx-sent',
+          subdomain,
+          newOwner: params.newOwner,
+          txHash: hash,
+        });
         console.log('Subdomain creation tx:', hash);
+
+        setProgress({
+          stage: 'confirming',
+          subdomain,
+          newOwner: params.newOwner,
+          txHash: hash,
+        });
 
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         console.log('Subdomain created! Block:', receipt.blockNumber);
+
+        setProgress({
+          stage: 'complete',
+          subdomain,
+          newOwner: params.newOwner,
+          txHash: hash,
+          blockNumber: receipt.blockNumber,
+        });
 
         setIsLoading(false);
         return {
@@ -132,12 +188,14 @@ export function useClaimSubdomain() {
           subdomain,
           node: subdomainNode,
           txHash: hash,
+          blockNumber: receipt.blockNumber,
         };
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error('Failed to claim subdomain');
         setError(error);
         setIsLoading(false);
+        setProgress(null);
         return {
           success: false,
           error: error.message,
@@ -156,6 +214,7 @@ export function useClaimSubdomain() {
     checkSubdomainAvailability,
     isLoading,
     error,
+    progress,
     clearError,
   };
 }

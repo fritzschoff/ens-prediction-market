@@ -67,6 +67,12 @@ export function useMarketData(nameOrId: string) {
       return;
     }
 
+    if (!nameOrId) {
+      setError(new Error('Market name or ID is required'));
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -78,54 +84,66 @@ export function useMarketData(nameOrId: string) {
         marketId = nameOrId;
       } else {
         const ensName = nameOrId.includes('.') ? nameOrId : `${nameOrId}.predict.eth`;
-        ensRecords = await resolveMarketFromENS(publicClient, ensName);
         
-        if (!ensRecords) {
-          throw new Error(`Market not found for ENS name: ${ensName}`);
-        }
-
-        const allMarketsCount = await publicClient.readContract({
+        const foundMarketId = await publicClient.readContract({
           address: CONTRACTS.MARKET_FACTORY,
           abi: MARKET_FACTORY_ABI,
-          functionName: 'getMarketCount',
+          functionName: 'getMarketByENS',
+          args: [ensName],
         });
-
-        let foundMarketId: string | null = null;
-        const count = Number(allMarketsCount);
-
-        for (let i = 0; i < Math.min(count, 100); i++) {
-          try {
-            const id = await publicClient.readContract({
-              address: CONTRACTS.MARKET_FACTORY,
-              abi: MARKET_FACTORY_ABI,
-              functionName: 'getMarketIdAt',
-              args: [BigInt(i)],
-            });
-
-            const info = await publicClient.readContract({
-              address: CONTRACTS.MARKET_FACTORY,
-              abi: MARKET_FACTORY_ABI,
-              functionName: 'getMarketInfo',
-              args: [id],
-            });
-
-            if (
-              info.yesToken.toLowerCase() === ensRecords.yesToken?.toLowerCase() &&
-              info.noToken.toLowerCase() === ensRecords.noToken?.toLowerCase()
-            ) {
-              foundMarketId = id;
-              break;
-            }
-          } catch (err) {
-            continue;
+        
+        if (!foundMarketId || foundMarketId === '0x0000000000000000000000000000000000000000000000000000000000000000') {
+          ensRecords = await resolveMarketFromENS(publicClient, ensName);
+          
+          if (!ensRecords) {
+            throw new Error(`Market not found for ENS name: ${ensName}`);
           }
-        }
 
-        if (!foundMarketId) {
-          throw new Error('Market ID not found for ENS name');
-        }
+          const allMarketsCount = await publicClient.readContract({
+            address: CONTRACTS.MARKET_FACTORY,
+            abi: MARKET_FACTORY_ABI,
+            functionName: 'getMarketCount',
+          });
 
-        marketId = foundMarketId;
+          let legacyMarketId: string | null = null;
+          const count = Number(allMarketsCount);
+
+          for (let i = 0; i < Math.min(count, 100); i++) {
+            try {
+              const id = await publicClient.readContract({
+                address: CONTRACTS.MARKET_FACTORY,
+                abi: MARKET_FACTORY_ABI,
+                functionName: 'getMarketIdAt',
+                args: [BigInt(i)],
+              });
+
+              const info = await publicClient.readContract({
+                address: CONTRACTS.MARKET_FACTORY,
+                abi: MARKET_FACTORY_ABI,
+                functionName: 'getMarketInfo',
+                args: [id],
+              });
+
+              if (
+                info.yesToken.toLowerCase() === ensRecords.yesToken?.toLowerCase() &&
+                info.noToken.toLowerCase() === ensRecords.noToken?.toLowerCase()
+              ) {
+                legacyMarketId = id;
+                break;
+              }
+            } catch (err) {
+              continue;
+            }
+          }
+
+          if (!legacyMarketId) {
+            throw new Error('Market ID not found for ENS name');
+          }
+
+          marketId = legacyMarketId;
+        } else {
+          marketId = foundMarketId;
+        }
       }
 
       const marketInfo = await publicClient.readContract({
@@ -203,7 +221,7 @@ export function useMarketData(nameOrId: string) {
             ? `${formatEther(totalCollateral)} ETH`
             : '0 ETH',
         criteria: ensRecords?.criteria,
-        ensName: nameOrId.includes('.') ? nameOrId : undefined,
+        ensName: marketInfo.ensName || undefined,
       };
 
       setMarket(marketData);

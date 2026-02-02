@@ -1,24 +1,24 @@
 'use client';
 
+import { use, useEffect } from 'react';
 import { BetPanel } from '@/components/BetPanel';
 import { PositionManager } from '@/components/PositionManager';
 import { formatDistanceToNow, shortenAddress } from '@/lib/utils';
-import { useMarketData, useEthPrice, useUserPositions } from '@/hooks';
-import { useAccount, usePublicClient } from 'wagmi';
+import { useMarketData, useEthPrice, useUserPositions, useBetActions } from '@/hooks';
+import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { formatEther } from 'viem';
 
 interface MarketPageProps {
-  params: { name: string };
+  params: Promise<{ name: string }>;
 }
 
 export default function MarketPage({ params }: MarketPageProps) {
-  const { name } = params;
+  const { name } = use(params);
   const { isConnected } = useAccount();
-  const publicClient = usePublicClient();
-  const { market, isLoading, error } = useMarketData(name);
+  const { market, isLoading, error, refetch } = useMarketData(name || '');
   const { price: ethPrice } = useEthPrice();
-  const { positions } = useUserPositions(
+  const { positions, refetch: refetchPositions } = useUserPositions(
     market?.yesToken,
     market?.noToken,
     market?.yesPrice || 0.5,
@@ -27,12 +27,38 @@ export default function MarketPage({ params }: MarketPageProps) {
     market?.outcome
   );
 
-  const handleBet = (outcome: boolean, amount: string) => {
-    console.log('Bet placed:', { outcome, amount });
+  const {
+    mintPosition,
+    claimWinnings,
+    isMinting,
+    isClaiming,
+    isMintSuccess,
+    isClaimSuccess,
+    mintError,
+    claimError,
+  } = useBetActions(market?.poolKey);
+
+  useEffect(() => {
+    if (isMintSuccess || isClaimSuccess) {
+      refetch();
+      refetchPositions();
+    }
+  }, [isMintSuccess, isClaimSuccess, refetch, refetchPositions]);
+
+  const handleBet = async (outcome: boolean, amount: string) => {
+    try {
+      await mintPosition(amount);
+    } catch (err) {
+      console.error('Bet failed:', err);
+    }
   };
 
-  const handleClaim = () => {
-    console.log('Claiming winnings');
+  const handleClaim = async () => {
+    try {
+      await claimWinnings();
+    } catch (err) {
+      console.error('Claim failed:', err);
+    }
   };
 
   const totalVolumeUSD =
@@ -91,6 +117,28 @@ export default function MarketPage({ params }: MarketPageProps) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
+        {market.ensName && (
+          <div className="mb-6 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/20">
+                <svg className="h-5 w-5 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-xs text-indigo-400/60 font-medium">ENS Domain</div>
+                <div className="text-lg font-bold text-indigo-300">{market.ensName}</div>
+              </div>
+              <div className="ml-auto">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/20 px-3 py-1 text-xs font-medium text-indigo-300">
+                  <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+                  Verified
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="mb-4 flex items-center gap-2 flex-wrap">
           {market.resolved && (
             <div
@@ -106,12 +154,6 @@ export default function MarketPage({ params }: MarketPageProps) {
                 }`}
               />
               Resolved: {market.outcome ? 'YES' : 'NO'}
-            </div>
-          )}
-          {market.ensName && (
-            <div className="inline-flex items-center gap-2 rounded-full bg-indigo-500/10 px-4 py-1.5 text-sm font-medium text-indigo-400">
-              <span className="h-2 w-2 rounded-full bg-indigo-400 animate-pulse" />
-              {market.ensName}
             </div>
           )}
         </div>
@@ -245,12 +287,16 @@ export default function MarketPage({ params }: MarketPageProps) {
             noPrice={market.noPrice}
             onBet={handleBet}
             disabled={market.resolved}
+            isLoading={isMinting}
+            error={mintError}
           />
           <PositionManager
             positions={positions}
             resolved={market.resolved}
             winningOutcome={market.outcome}
             onClaim={handleClaim}
+            isLoading={isClaiming}
+            error={claimError}
           />
         </div>
       </div>

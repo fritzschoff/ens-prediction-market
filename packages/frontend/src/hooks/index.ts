@@ -7,3 +7,4 @@ export * from './useEthPrice';
 export * from './useUserPositions';
 export * from './useRegisterENS';
 export * from './useClaimSubdomain';
+export * from './useBetActions';

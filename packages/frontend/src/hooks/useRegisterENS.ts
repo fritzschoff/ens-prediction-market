@@ -3,17 +3,36 @@
 import { useState, useCallback } from 'react';
 import {
   useAccount,
-  useSendTransaction,
-  useWaitForTransactionReceipt,
   usePublicClient,
+  useWalletClient,
 } from 'wagmi';
-import { Address } from 'viem';
+import { Address, namehash, encodeFunctionData } from 'viem';
 import {
-  encodeSetMarketRecords,
-  PartialMarketRecords,
   getTextRecord,
   MARKET_RECORD_KEYS,
+  ENS_PUBLIC_RESOLVER_SEPOLIA,
 } from '@hack-money/ens';
+
+const resolverAbi = [
+  {
+    inputs: [
+      { name: 'node', type: 'bytes32' },
+      { name: 'key', type: 'string' },
+      { name: 'value', type: 'string' },
+    ],
+    name: 'setText',
+    outputs: [],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+  {
+    inputs: [{ name: 'data', type: 'bytes[]' }],
+    name: 'multicall',
+    outputs: [{ name: 'results', type: 'bytes[]' }],
+    stateMutability: 'nonpayable',
+    type: 'function',
+  },
+] as const;
 
 export interface RegisterENSParams {
   ensName: string;
@@ -24,6 +43,7 @@ export interface RegisterENSParams {
   yesToken: Address;
   noToken: Address;
   creator: Address;
+  marketId?: string;
 }
 
 export interface ENSSimulationResult {
@@ -36,20 +56,13 @@ export interface ENSSimulationResult {
 export function useRegisterENS() {
   const { address, isConnected } = useAccount();
   const publicClient = usePublicClient();
+  const { data: walletClient } = useWalletClient();
   const [error, setError] = useState<Error | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationError, setSimulationError] = useState<Error | null>(null);
-
-  const {
-    sendTransaction,
-    data: hash,
-    isPending: isWriting,
-    error: sendError,
-  } = useSendTransaction();
-
-  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
-    hash,
-  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [hash, setHash] = useState<`0x${string}` | undefined>(undefined);
 
   const checkENSAvailability = useCallback(
     async (ensName: string): Promise<boolean> => {
@@ -148,49 +161,76 @@ export function useRegisterENS() {
 
   const registerENS = useCallback(
     async (params: RegisterENSParams) => {
-      if (!isConnected || !address) {
+      if (!isConnected || !address || !walletClient || !publicClient) {
         setError(new Error('Wallet not connected'));
         return;
       }
 
       setError(null);
+      setIsLoading(true);
+      setIsSuccess(false);
+
+      const node = namehash(params.ensName);
+
+      const records: [string, string][] = [
+        [MARKET_RECORD_KEYS.pool, params.pool],
+        [MARKET_RECORD_KEYS.oracle, params.oracle],
+        [MARKET_RECORD_KEYS.expiry, params.expiry.toString()],
+        [MARKET_RECORD_KEYS.criteria, params.criteria],
+        [MARKET_RECORD_KEYS.yesToken, params.yesToken],
+        [MARKET_RECORD_KEYS.noToken, params.noToken],
+        [MARKET_RECORD_KEYS.creator, params.creator],
+      ];
+
+      if (params.marketId) {
+        records.push([MARKET_RECORD_KEYS.marketId, params.marketId]);
+      }
 
       try {
-        const records: PartialMarketRecords = {
-          pool: params.pool,
-          oracle: params.oracle,
-          expiry: params.expiry,
-          criteria: params.criteria,
-          yesToken: params.yesToken,
-          noToken: params.noToken,
-          creator: params.creator,
-        };
+        const calls = records.map(([key, value]) =>
+          encodeFunctionData({
+            abi: resolverAbi,
+            functionName: 'setText',
+            args: [node, key, value],
+          })
+        );
 
-        const { to, data } = encodeSetMarketRecords({
-          name: params.ensName,
-          records,
+        console.log(`Setting ${records.length} ENS records via multicall...`);
+
+        const multicallData = encodeFunctionData({
+          abi: resolverAbi,
+          functionName: 'multicall',
+          args: [calls],
         });
 
-        sendTransaction({
-          to,
-          data,
+        const txHash = await walletClient.sendTransaction({
+          to: ENS_PUBLIC_RESOLVER_SEPOLIA,
+          data: multicallData,
         });
+
+        setHash(txHash);
+        console.log('ENS multicall tx:', txHash);
+
+        await publicClient.waitForTransactionReceipt({ hash: txHash });
+        console.log('All ENS records set successfully');
+
+        setIsSuccess(true);
+        setIsLoading(false);
       } catch (err) {
         const error =
           err instanceof Error ? err : new Error('Failed to register ENS');
         setError(error);
+        setIsLoading(false);
         throw error;
       }
     },
-    [isConnected, address, sendTransaction]
+    [isConnected, address, walletClient, publicClient]
   );
 
   const clearError = useCallback(() => {
     setError(null);
     setSimulationError(null);
   }, []);
-
-  const isLoading = isWriting || isConfirming;
 
   return {
     registerENS,
@@ -201,7 +241,7 @@ export function useRegisterENS() {
     isLoading,
     isSimulating,
     isSuccess,
-    error: error || sendError,
+    error,
     simulationError,
     isConnected,
   };

@@ -10,66 +10,61 @@ interface BetPanelProps {
   noPrice: number;
   onBet: (outcome: boolean, amount: string) => void;
   disabled?: boolean;
+  isLoading?: boolean;
+  error?: Error | null;
 }
 
-export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) {
+export function BetPanel({ yesPrice, noPrice, onBet, disabled, isLoading, error }: BetPanelProps) {
   const { isConnected } = useAccount();
   const { price: ethPrice } = useEthPrice();
-  const [selectedOutcome, setSelectedOutcome] = useState<boolean | null>(null);
   const [amount, setAmount] = useState("");
+  const [showInfo, setShowInfo] = useState(true);
 
-  const potentialWin =
-    selectedOutcome !== null && amount
-      ? (parseFloat(amount) / (selectedOutcome ? yesPrice : noPrice)).toFixed(4)
-      : "0.00";
-
-  const potentialWinUSD = ethPrice && potentialWin !== "0.00"
-    ? (parseFloat(potentialWin) * ethPrice).toFixed(2)
-    : null;
+  const amountNum = parseFloat(amount) || 0;
+  const yesReturn = amountNum > 0 ? (amountNum / yesPrice).toFixed(4) : "0.00";
+  const noReturn = amountNum > 0 ? (amountNum / noPrice).toFixed(4) : "0.00";
 
   const amountUSD = ethPrice && amount
     ? (parseFloat(amount) * ethPrice).toFixed(2)
     : null;
 
   const handleBet = () => {
-    if (selectedOutcome !== null && amount) {
-      onBet(selectedOutcome, amount);
+    if (amount && amountNum > 0) {
+      onBet(true, amount);
     }
   };
 
   return (
     <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
-      <h3 className="mb-4 text-lg font-semibold text-slate-100">Place Bet</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-slate-100">Buy Position</h3>
+        <button
+          type="button"
+          onClick={() => setShowInfo(!showInfo)}
+          className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-700/50 text-slate-400 transition-colors hover:bg-slate-700 hover:text-slate-300"
+        >
+          <span className="text-xs font-bold">?</span>
+        </button>
+      </div>
+
+      {showInfo && (
+        <div className="mb-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 p-3">
+          <p className="text-xs text-indigo-300 leading-relaxed">
+            <strong>How it works:</strong> When you buy a position, you receive <span className="text-emerald-400">YES</span> and <span className="text-rose-400">NO</span> tokens equally. 
+            Hold the tokens for the outcome you believe in. When the market resolves, winning tokens can be redeemed for ETH.
+          </p>
+        </div>
+      )}
 
       <div className="mb-4 flex gap-3">
-        <button
-          onClick={() => setSelectedOutcome(true)}
-          disabled={disabled}
-          className={cn(
-            "flex-1 rounded-xl p-4 text-center transition-all",
-            selectedOutcome === true
-              ? "bg-emerald-500 text-white ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
-              : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          <div className="text-2xl font-bold">{(yesPrice * 100).toFixed(0)}%</div>
-          <div className="text-sm font-medium opacity-80">YES</div>
-        </button>
-        <button
-          onClick={() => setSelectedOutcome(false)}
-          disabled={disabled}
-          className={cn(
-            "flex-1 rounded-xl p-4 text-center transition-all",
-            selectedOutcome === false
-              ? "bg-rose-500 text-white ring-2 ring-rose-400 ring-offset-2 ring-offset-slate-900"
-              : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20",
-            disabled && "opacity-50 cursor-not-allowed"
-          )}
-        >
-          <div className="text-2xl font-bold">{(noPrice * 100).toFixed(0)}%</div>
-          <div className="text-sm font-medium opacity-80">NO</div>
-        </button>
+        <div className="flex-1 rounded-xl bg-emerald-500/10 p-4 text-center">
+          <div className="text-2xl font-bold text-emerald-400">{(yesPrice * 100).toFixed(0)}%</div>
+          <div className="text-sm font-medium text-emerald-400/60">YES odds</div>
+        </div>
+        <div className="flex-1 rounded-xl bg-rose-500/10 p-4 text-center">
+          <div className="text-2xl font-bold text-rose-400">{(noPrice * 100).toFixed(0)}%</div>
+          <div className="text-sm font-medium text-rose-400/60">NO odds</div>
+        </div>
       </div>
 
       <div className="mb-4">
@@ -112,40 +107,50 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled }: BetPanelProps) 
       </div>
 
       <div className="mb-4 rounded-xl bg-slate-800/30 p-4">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-slate-500">Potential Win</span>
-          <div className="text-right">
-            <span className="font-mono text-lg font-semibold text-slate-100">
-              {potentialWin} ETH
-            </span>
-            {potentialWinUSD && (
-              <div className="text-xs text-slate-500 mt-0.5">
-                ≈ ${potentialWinUSD}
-              </div>
-            )}
+        <div className="text-xs text-slate-500 mb-3">You'll receive both tokens. Returns if market resolves:</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg bg-emerald-500/10 p-3 text-center">
+            <div className="text-xs text-emerald-400/60 mb-1">If YES wins</div>
+            <div className="font-mono font-semibold text-emerald-400">{yesReturn} ETH</div>
+          </div>
+          <div className="rounded-lg bg-rose-500/10 p-3 text-center">
+            <div className="text-xs text-rose-400/60 mb-1">If NO wins</div>
+            <div className="font-mono font-semibold text-rose-400">{noReturn} ETH</div>
           </div>
         </div>
       </div>
 
+      {error && (
+        <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3">
+          <p className="text-sm text-red-400">{error.message}</p>
+        </div>
+      )}
+
       <button
         onClick={handleBet}
-        disabled={disabled || !isConnected || selectedOutcome === null || !amount}
+        disabled={disabled || !isConnected || !amount || amountNum <= 0 || isLoading}
         className={cn(
           "w-full rounded-xl py-4 text-lg font-semibold transition-all",
-          selectedOutcome === true
-            ? "bg-emerald-500 text-white hover:bg-emerald-600"
-            : selectedOutcome === false
-            ? "bg-rose-500 text-white hover:bg-rose-600"
-            : "bg-indigo-500 text-white hover:bg-indigo-600",
-          (disabled || !isConnected || selectedOutcome === null || !amount) &&
+          "bg-gradient-to-r from-indigo-500 to-purple-500 text-white hover:from-indigo-600 hover:to-purple-600",
+          (disabled || !isConnected || !amount || amountNum <= 0 || isLoading) &&
             "opacity-50 cursor-not-allowed"
         )}
       >
-        {!isConnected
-          ? "Connect Wallet"
-          : selectedOutcome === null
-          ? "Select Outcome"
-          : `Bet on ${selectedOutcome ? "YES" : "NO"}`}
+        {isLoading ? (
+          <span className="flex items-center justify-center gap-2">
+            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Buying Position...
+          </span>
+        ) : !isConnected ? (
+          "Connect Wallet"
+        ) : !amount ? (
+          "Enter Amount"
+        ) : (
+          `Buy ${amount} ETH Position`
+        )}
       </button>
     </div>
   );

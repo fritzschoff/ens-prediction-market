@@ -46,6 +46,7 @@ export default function CreateMarketPage() {
     checkSubdomainAvailability,
     isLoading: isClaimingSubdomain,
     error: claimError,
+    progress: claimProgress,
     clearError: clearClaimError,
   } = useClaimSubdomain();
 
@@ -88,6 +89,7 @@ export default function CreateMarketPage() {
             yesToken: marketResult.yesToken,
             noToken: marketResult.noToken,
             creator: marketResult.creator,
+            marketId: marketResult.marketId,
           });
         } else {
           setSubdomainError(result.error || 'Failed to claim subdomain');
@@ -145,6 +147,7 @@ export default function CreateMarketPage() {
         question,
         oracle: address,
         expiry: expiryTimestamp,
+        ensName: fullEnsName,
       };
 
       const marketSimulation = await simulateCreateMarket(marketParams);
@@ -289,6 +292,130 @@ export default function CreateMarketPage() {
             </div>
           </div>
 
+          {step !== 'idle' && (
+            <div className="rounded-xl border border-slate-700 bg-slate-800/30 p-4">
+              <div className="mb-3 text-sm font-medium text-slate-300">
+                Creation Progress
+              </div>
+              <div className="space-y-3">
+                {[
+                  { key: 'checking', label: 'Check subdomain availability', icon: '1' },
+                  { key: 'simulating', label: 'Simulate market creation', icon: '2' },
+                  { key: 'creating', label: 'Create market (sign tx)', icon: '3' },
+                  { 
+                    key: 'claiming', 
+                    label: 'Claim ENS subdomain', 
+                    icon: '4', 
+                    subSteps: step === 'claiming' && claimProgress ? [
+                      { stage: 'preparing', label: 'Preparing subdomain creation' },
+                      { stage: 'creating', label: `Creating subdomain: ${claimProgress.subdomain || '...'}`, details: `Assigning to: ${claimProgress.newOwner ? `${claimProgress.newOwner.slice(0, 6)}...${claimProgress.newOwner.slice(-4)}` : '...'}` },
+                      { stage: 'tx-sent', label: `Subdomain creation tx: ${claimProgress.txHash ? `${claimProgress.txHash.slice(0, 10)}...` : '...'}` },
+                      { stage: 'confirming', label: 'Waiting for confirmation...' },
+                      { stage: 'complete', label: `Subdomain created! Block: ${claimProgress.blockNumber ? claimProgress.blockNumber.toString() : '...'}` },
+                    ] : [] 
+                  },
+                  { key: 'registering', label: 'Register ENS records', icon: '5' },
+                ].map(({ key, label, icon, subSteps }) => {
+                  const steps = ['checking', 'simulating', 'creating', 'claiming', 'registering', 'success'];
+                  const currentIndex = steps.indexOf(step);
+                  const stepIndex = steps.indexOf(key);
+                  const isComplete = currentIndex > stepIndex || step === 'success';
+                  const isCurrent = step === key;
+                  const showSubSteps = isCurrent && subSteps && subSteps.length > 0;
+
+                  return (
+                    <div key={key}>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold transition-all ${
+                            isComplete
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : isCurrent
+                              ? 'bg-indigo-500/20 text-indigo-400 ring-2 ring-indigo-500/50'
+                              : 'bg-slate-700/50 text-slate-500'
+                          }`}
+                        >
+                          {isComplete ? (
+                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          ) : isCurrent ? (
+                            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            icon
+                          )}
+                        </div>
+                        <span
+                          className={`text-sm ${
+                            isComplete
+                              ? 'text-emerald-400'
+                              : isCurrent
+                              ? 'text-slate-200'
+                              : 'text-slate-500'
+                          }`}
+                        >
+                          {label}
+                          {isCurrent && !showSubSteps && '...'}
+                        </span>
+                      </div>
+                      {showSubSteps && (
+                        <div className="ml-10 mt-2 space-y-2 border-l-2 border-slate-700 pl-4">
+                          {subSteps.map((subStep, idx) => {
+                            const currentStage = claimProgress?.stage;
+                            const stageOrder = ['preparing', 'creating', 'tx-sent', 'confirming', 'complete'];
+                            const currentStageIndex = currentStage ? stageOrder.indexOf(currentStage) : -1;
+                            const subStepStageIndex = stageOrder.indexOf(subStep.stage);
+                            
+                            const isSubStepComplete = currentStageIndex > subStepStageIndex || currentStage === 'complete';
+                            const isSubStepCurrent = currentStage === subStep.stage;
+                            const shouldShow = currentStageIndex >= subStepStageIndex || currentStage === 'complete';
+
+                            if (!shouldShow) return null;
+
+                            return (
+                              <div key={idx} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <div
+                                    className={`h-1.5 w-1.5 rounded-full transition-all ${
+                                      isSubStepComplete
+                                        ? 'bg-emerald-400'
+                                        : isSubStepCurrent
+                                        ? 'bg-indigo-400 animate-pulse'
+                                        : 'bg-slate-600'
+                                    }`}
+                                  />
+                                  <span
+                                    className={`text-xs ${
+                                      isSubStepComplete
+                                        ? 'text-emerald-400'
+                                        : isSubStepCurrent
+                                        ? 'text-slate-300'
+                                        : 'text-slate-500'
+                                    }`}
+                                  >
+                                    {subStep.label}
+                                  </span>
+                                </div>
+                                {subStep.details && (isSubStepCurrent || isSubStepComplete) && (
+                                  <div className="ml-3.5 text-xs text-slate-500">
+                                    {subStep.details}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {(error ||
             simulationError ||
             ensError ||
@@ -346,54 +473,6 @@ export default function CreateMarketPage() {
             </div>
           )}
 
-          {step === 'claiming' && (
-            <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-400">
-              <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Market created! Claiming subdomain...
-              </div>
-            </div>
-          )}
-
-          {step === 'registering' && (
-            <div className="rounded-xl border border-yellow-500/50 bg-yellow-500/10 p-4 text-sm text-yellow-400">
-              <div className="flex items-center gap-2">
-                <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                    fill="none"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
-                </svg>
-                Subdomain claimed! Registering ENS records...
-              </div>
-            </div>
-          )}
-
           {isSuccess && marketId && (
             <div className="rounded-xl border border-green-500/50 bg-green-500/10 p-4 text-sm text-green-400">
               <div className="font-semibold mb-2">
@@ -436,7 +515,7 @@ export default function CreateMarketPage() {
               ? 'Registering ENS...'
               : !isConnected
               ? 'Connect Wallet'
-              : simulationError || subdomainError
+              : error || simulationError || ensError || claimError || subdomainError
               ? 'Retry'
               : isSuccess
               ? 'Market Created!'

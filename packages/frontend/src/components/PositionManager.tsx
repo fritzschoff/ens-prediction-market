@@ -15,6 +15,8 @@ interface PositionManagerProps {
   resolved?: boolean;
   winningOutcome?: boolean;
   onClaim?: () => void;
+  isLoading?: boolean;
+  error?: Error | null;
 }
 
 export function PositionManager({
@@ -22,6 +24,8 @@ export function PositionManager({
   resolved,
   winningOutcome,
   onClaim,
+  isLoading,
+  error,
 }: PositionManagerProps) {
   const { price: ethPrice } = useEthPrice();
   const hasWinningPosition =
@@ -102,12 +106,32 @@ export function PositionManager({
         })}
       </div>
 
+      {error && (
+        <div className="mt-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3">
+          <p className="text-sm text-red-400">{error.message}</p>
+        </div>
+      )}
+
       {resolved && hasWinningPosition && (
         <button
           onClick={onClaim}
-          className="mt-4 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3 font-semibold text-white transition-all hover:from-emerald-600 hover:to-emerald-700"
+          disabled={isLoading}
+          className={cn(
+            "mt-4 w-full rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 py-3 font-semibold text-white transition-all hover:from-emerald-600 hover:to-emerald-700",
+            isLoading && "opacity-50 cursor-not-allowed"
+          )}
         >
-          Claim Winnings
+          {isLoading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Claiming...
+            </span>
+          ) : (
+            "Claim Winnings"
+          )}
         </button>
       )}
     </div>

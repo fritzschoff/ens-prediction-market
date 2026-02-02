@@ -7,7 +7,7 @@ import {
   MARKET_FACTORY_ABI,
   PREDICTION_HOOK_ABI,
 } from '@/lib/contracts';
-import { Address, formatEther } from 'viem';
+import { Address, formatEther, zeroAddress } from 'viem';
 
 export interface Market {
   id: string;
@@ -30,22 +30,23 @@ export interface Market {
   yesPrice?: number;
   noPrice?: number;
   totalVolume?: string;
+  ensName?: string;
 }
 
 export function useMarkets() {
   const { isConnected } = useAccount();
   const publicClient = usePublicClient();
   const [markets, setMarkets] = useState<Market[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [totalCount, setTotalCount] = useState<number>(0);
 
   const fetchMarkets = useCallback(async () => {
     if (!isConnected || !publicClient) {
       setError(new Error('Please connect your wallet to fetch markets'));
+      setIsLoading(false);
       return;
     }
-
     setIsLoading(true);
     setError(null);
 
@@ -64,31 +65,41 @@ export function useMarkets() {
         return;
       }
 
-      const marketsToFetch = 10;
+      const marketsToFetch = Math.min(10, count);
       const fetchedMarkets: Market[] = [];
       let emptyResults = 0;
       const maxEmptyResults = 15;
       let fetchedCount = 0;
 
+      const marketIdPromises: Promise<`0x${string}`>[] = [];
       for (
         let i = 0;
-        i < count &&
+        i < Math.min(count, marketsToFetch + maxEmptyResults);
+        i++
+      ) {
+        marketIdPromises.push(
+          publicClient.readContract({
+            address: CONTRACTS.MARKET_FACTORY,
+            abi: MARKET_FACTORY_ABI,
+            functionName: 'getMarketIdAt',
+            args: [BigInt(i)],
+          })
+        );
+      }
+
+      const marketIds = await Promise.all(marketIdPromises);
+
+      for (
+        let i = 0;
+        i < marketIds.length &&
         fetchedCount < marketsToFetch &&
         emptyResults < maxEmptyResults;
         i++
       ) {
         try {
-          const marketId = await publicClient.readContract({
-            address: CONTRACTS.MARKET_FACTORY,
-            abi: MARKET_FACTORY_ABI,
-            functionName: 'getMarketIdAt',
-            args: [BigInt(i)],
-          });
+          const marketId = marketIds[i];
 
-          if (
-            marketId ===
-            '0x0000000000000000000000000000000000000000000000000000000000000000'
-          ) {
+          if (!marketId || marketId === zeroAddress) {
             emptyResults++;
             continue;
           }
@@ -114,8 +125,7 @@ export function useMarkets() {
             console.warn('Failed to fetch hook market data:', err);
           }
 
-          const yesTokenBalance = hookMarket?.totalCollateral || 0n;
-          const totalCollateral = yesTokenBalance;
+          const totalCollateral = hookMarket?.totalCollateral || 0n;
 
           let yesPrice = 0.5;
           let noPrice = 0.5;
@@ -124,6 +134,8 @@ export function useMarkets() {
             yesPrice = hookMarket.outcome ? 1 : 0;
             noPrice = hookMarket.outcome ? 0 : 1;
           }
+
+          const ensName = marketInfo.ensName || undefined;
 
           const market: Market = {
             id: marketId,
@@ -149,6 +161,7 @@ export function useMarkets() {
               totalCollateral > 0n
                 ? `${formatEther(totalCollateral)} ETH`
                 : '0 ETH',
+            ensName,
           };
 
           fetchedMarkets.push(market);
@@ -162,10 +175,11 @@ export function useMarkets() {
 
       setMarkets(fetchedMarkets);
     } catch (err) {
-      setError(
-        err instanceof Error ? err : new Error('Failed to fetch markets')
-      );
+      const errorMessage =
+        err instanceof Error ? err.message : 'Failed to fetch markets';
+      setError(new Error(errorMessage));
       console.error('Error fetching markets:', err);
+      setMarkets([]);
     } finally {
       setIsLoading(false);
     }
@@ -176,7 +190,12 @@ export function useMarkets() {
       fetchMarkets();
     } else {
       setMarkets([]);
-      setError(new Error('Please connect your wallet to fetch markets'));
+      setIsLoading(false);
+      if (!isConnected) {
+        setError(new Error('Please connect your wallet to fetch markets'));
+      } else {
+        setError(null);
+      }
     }
   }, [isConnected, publicClient, fetchMarkets]);
 

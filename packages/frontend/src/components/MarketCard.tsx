@@ -36,17 +36,20 @@ export function MarketCard({
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 opacity-0 transition-opacity group-hover:opacity-100" />
 
         <div className="relative">
+          {ensName && (
+            <div className="mb-3 flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/20 px-3 py-2">
+              <svg className="h-4 w-4 text-indigo-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+              <span className="text-sm font-medium text-indigo-300 truncate">{ensName}</span>
+            </div>
+          )}
+
           <div className="mb-3 flex items-center gap-2 flex-wrap">
             {isExample && (
               <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-3 py-1 text-xs font-medium text-amber-400 border border-amber-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
                 Example
-              </div>
-            )}
-            {ensName && (
-              <div className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                {ensName}
               </div>
             )}
           </div>
