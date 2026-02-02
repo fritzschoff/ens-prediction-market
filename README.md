@@ -25,11 +25,11 @@ COMMIT PHASE          REVEAL PHASE          SETTLEMENT
 
 ### Why Privacy Matters for Prediction Markets
 
-| Problem | Traditional Markets | Our Solution |
-|---------|---------------------|--------------|
-| Front-running | MEV bots see your bet and trade ahead | Bet direction hidden until reveal |
-| Information leakage | Large bets move the market before execution | Batch settlement at uniform price |
-| Adverse selection | Informed traders exploit visible order flow | All participants reveal simultaneously |
+| Problem             | Traditional Markets                         | Our Solution                           |
+| ------------------- | ------------------------------------------- | -------------------------------------- |
+| Front-running       | MEV bots see your bet and trade ahead       | Bet direction hidden until reveal      |
+| Information leakage | Large bets move the market before execution | Batch settlement at uniform price      |
+| Adverse selection   | Informed traders exploit visible order flow | All participants reveal simultaneously |
 
 ## Architecture
 
@@ -63,36 +63,6 @@ COMMIT PHASE          REVEAL PHASE          SETTLEMENT
 │   3. Bets execute against Uniswap v4 pool                      │
 └─────────────────────────────────────────────────────────────────┘
 ```
-
-## Project Structure
-
-```
-hack-money/
-├── packages/
-│   ├── ens/           # ENS text record utilities
-│   ├── yellow/        # Yellow Network SDK integration
-│   ├── uniswap-v4/    # Smart contracts (Foundry)
-│   │   ├── src/
-│   │   │   ├── PrivateBettingHook.sol   # Privacy-preserving betting
-│   │   │   ├── PredictionMarketHook.sol # Standard prediction market
-│   │   │   ├── OutcomeToken.sol
-│   │   │   └── MarketFactory.sol
-│   │   └── test/
-│   │       └── PrivateBettingHook.t.sol # 14 privacy tests
-│   └── frontend/      # Next.js application
-├── pnpm-workspace.yaml
-└── package.json
-```
-
-## Prize Tracks
-
-This project targets multiple hackathon prize pools:
-
-| Track | Prize | Integration |
-|-------|-------|-------------|
-| **Uniswap v4 Privacy DeFi** | $5,000 | Commit-reveal betting, batch settlement, MEV protection |
-| ENS | $1,500 | Market discovery via human-readable names, text records for market metadata |
-| Yellow Network | $5,000+ | Gasless instant betting via state channels |
 
 ## Quick Start
 
@@ -136,13 +106,13 @@ pnpm dev
 
 ## Test Coverage
 
-| Test Suite | Tests | Description |
-|------------|-------|-------------|
-| PrivateBettingHookTest | 14 | Privacy commit-reveal flow |
-| PredictionMarketHookTest | 14 | Standard market operations |
-| MarketFactoryTest | 8 | Market creation |
-| OutcomeTokenTest | 6 | Token mint/burn |
-| **Total** | **42** | All passing |
+| Test Suite               | Tests  | Description                |
+| ------------------------ | ------ | -------------------------- |
+| PrivateBettingHookTest   | 14     | Privacy commit-reveal flow |
+| PredictionMarketHookTest | 14     | Standard market operations |
+| MarketFactoryTest        | 8      | Market creation            |
+| OutcomeTokenTest         | 6      | Token mint/burn            |
+| **Total**                | **42** | All passing                |
 
 ## Packages
 
