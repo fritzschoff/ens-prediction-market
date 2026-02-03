@@ -1,6 +1,6 @@
 # ENS Prediction Markets
 
-A decentralized prediction market platform built on Uniswap v4, featuring **privacy-preserving betting** through commit-reveal mechanisms, ENS integration for human-readable market names, and Yellow Network for gasless instant betting.
+A decentralized prediction market platform built on Uniswap v4, featuring **privacy-preserving betting** through commit-reveal mechanisms and ENS integration for human-readable market names.
 
 ## Privacy Features (Uniswap v4 Privacy DeFi Track)
 
@@ -107,7 +107,6 @@ pnpm dev
 ## Packages
 
 - [ENS Integration](./packages/ens/README.md) - Text record schema and utilities
-- [Yellow SDK](./packages/yellow/README.md) - State channel betting integration
 - [Uniswap v4 Hook](./packages/uniswap-v4/README.md) - Smart contracts with privacy features
 - [Frontend](./packages/frontend/README.md) - Next.js application
 
@@ -142,7 +141,7 @@ vercel --prod
 - **Frontend**: Next.js 14, React 18, Tailwind CSS
 - **Web3**: wagmi, viem, RainbowKit
 - **Contracts**: Solidity 0.8.26, Foundry
-- **Protocols**: Uniswap v4, ENS, Yellow Network
+- **Protocols**: Uniswap v4, ENS
 
 ## License
 

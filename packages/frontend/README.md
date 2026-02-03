@@ -5,7 +5,6 @@ Next.js frontend for ENS Prediction Markets. Features market discovery, betting 
 ## Features
 
 - Market discovery with ENS name resolution
-- Gasless betting via Yellow Network sessions
 - Market creation with ENS registration
 - Wallet connection via RainbowKit
 - Real-time odds display
@@ -99,18 +98,6 @@ Fetch market data from ENS text records:
 const { market, isLoading, error } = useMarketFromENS("btc-100k.predict.eth");
 ```
 
-### useYellowSession
-
-Manage Yellow Network betting sessions:
-
-```typescript
-const {
-  currentSession,
-  createSession,
-  placeBet,
-  settleBets,
-} = useYellowSession();
-```
 
 ## Styling
 

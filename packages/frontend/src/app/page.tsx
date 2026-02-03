@@ -23,8 +23,7 @@ export default function HomePage() {
           <span className="text-gradient">Prediction Markets</span>
         </h1>
         <p className="mx-auto max-w-2xl text-lg text-slate-400">
-          Trade on future outcomes with ENS-named markets, powered by Uniswap v4
-          and Yellow Network for instant, gasless betting.
+          Trade on future outcomes with ENS-named markets, powered by Uniswap v4.
         </p>
       </div>
 

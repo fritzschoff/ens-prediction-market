@@ -6,7 +6,6 @@
     "build": "pnpm -r build",
     "dev": "pnpm --filter frontend dev",
     "test": "pnpm -r test",
-    "test:contracts": "pnpm --filter @hack-money/uniswap-v4 test",
     "lint": "pnpm -r lint",
     "clean": "pnpm -r clean"
   },
@@ -18,4 +17,3 @@
     "pnpm": ">=8.0.0"
   }
 }
-

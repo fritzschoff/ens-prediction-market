@@ -38,7 +38,11 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled, isLoading, error 
 
   return (
     <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
-      <h3 className="mb-4 text-lg font-semibold text-slate-100">Place Your Bet</h3>
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-slate-100">
+          Place Your Bet
+        </h3>
+      </div>
 
       <div className="mb-4">
         <label className="mb-2 block text-sm font-medium text-slate-400">
@@ -176,7 +180,7 @@ export function BetPanel({ yesPrice, noPrice, onBet, disabled, isLoading, error 
           selectedOutcome === true && "bg-gradient-to-r from-emerald-500 to-green-500 text-white hover:from-emerald-600 hover:to-green-600",
           selectedOutcome === false && "bg-gradient-to-r from-rose-500 to-red-500 text-white hover:from-rose-600 hover:to-red-600",
           selectedOutcome === null && "bg-gradient-to-r from-indigo-500 to-purple-500 text-white",
-          (disabled || !isConnected || !amount || amountNum <= 0 || selectedOutcome === null || isLoading) &&
+          (disabled || !isConnected || !amount || amountNum <= 0 || selectedOutcome === null || isLoading || !canBet) &&
             "opacity-50 cursor-not-allowed"
         )}
       >

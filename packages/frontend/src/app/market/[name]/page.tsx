@@ -1,13 +1,13 @@
 'use client';
 
-import { use, useEffect } from 'react';
+import { use, useEffect, useState } from 'react';
 import { BetPanel } from '@/components/BetPanel';
 import { PositionManager } from '@/components/PositionManager';
 import { formatDistanceToNow, shortenAddress } from '@/lib/utils';
 import { useMarketData, useEthPrice, useUserPositions, useBetActions } from '@/hooks';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { formatEther } from 'viem';
+import { formatEther, parseEther } from 'viem';
 
 interface MarketPageProps {
   params: Promise<{ name: string }>;
