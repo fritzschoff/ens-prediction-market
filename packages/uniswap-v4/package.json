@@ -1,0 +1,9 @@
+{
+  "name": "@hack-money/uniswap-v4",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "forge build",
+    "clean": "forge clean"
+  }
+}
