@@ -102,6 +102,7 @@ export const MARKET_FACTORY_ABI = [
           { name: "question", type: "string" },
           { name: "oracle", type: "address" },
           { name: "expiry", type: "uint256" },
+          { name: "ensName", type: "string" },
         ],
         name: "params",
         type: "tuple",
