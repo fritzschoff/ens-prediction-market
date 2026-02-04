@@ -7,3 +7,4 @@ export * from './useUserPositions';
 export * from './useRegisterENS';
 export * from './useClaimSubdomain';
 export * from './useBetActions';
+export * from './usePrivateBetting';

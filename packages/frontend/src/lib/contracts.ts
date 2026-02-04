@@ -3,6 +3,7 @@ import { Address } from "viem";
 export const CONTRACTS = {
   MARKET_FACTORY: "0x5ab4d6d9c05f28bff69ad48cab9d119803ac7a16" as Address,
   PREDICTION_HOOK: "0x3e59cd5f19ba3affdd77aaf2cb7a1a72282e3ac0" as Address,
+  PRIVATE_BETTING_HOOK: "0x38498093d43e1d9b3fb86f492c64ceb9eb902880" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [

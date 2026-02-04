@@ -30,6 +30,13 @@ export function Navbar() {
               >
                 Create
               </Link>
+              <Link
+                href="/demo"
+                className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 px-3 py-1 text-sm font-medium text-amber-400 hover:from-amber-500/30 hover:to-orange-500/30 transition-colors"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Demo
+              </Link>
             </div>
           </div>
           <ConnectButton />

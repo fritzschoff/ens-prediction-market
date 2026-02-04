@@ -54,6 +54,7 @@ const tx = encodeSetMarketRecords({
     yesToken: "0x...",
     noToken: "0x...",
     creator: "vitalik.eth",
+    marketId: "0x...",
   },
 });
 
@@ -64,13 +65,14 @@ await walletClient.sendTransaction(tx);
 
 | Key | Type | Description |
 |-----|------|-------------|
-| `pool` | Address | Uniswap v4 pool address |
+| `pool` | Address | Uniswap v4 pool/hook address |
 | `oracle` | Address | Market resolution oracle |
 | `expiry` | Number | Unix timestamp for market expiry |
-| `criteria` | String | IPFS hash of resolution criteria |
+| `criteria` | String | Resolution criteria text or IPFS hash |
 | `yesToken` | Address | YES outcome token address |
 | `noToken` | Address | NO outcome token address |
-| `creator` | String | ENS name of market creator |
+| `creator` | String | Address or ENS name of market creator |
+| `marketId` | String | Unique market identifier (bytes32) |
 
 ## API Reference
 
@@ -96,13 +98,31 @@ Encodes a transaction to set a single text record.
 
 Encodes a multicall transaction to set multiple market records.
 
+#### `encodeCreateSubdomain(params)`
+
+Encodes a transaction to create a new ENS subdomain.
+
+#### `getSubdomainNode(parentName, label)`
+
+Computes the namehash for a subdomain.
+
 ## Constants
 
 ```typescript
-import { MARKET_RECORD_KEYS, ENS_PUBLIC_RESOLVER_SEPOLIA } from "@hack-money/ens";
+import { 
+  MARKET_RECORD_KEYS, 
+  ENS_PUBLIC_RESOLVER_SEPOLIA,
+  ENS_REGISTRY_ADDRESS,
+  PREDICT_ETH_PARENT 
+} from "@hack-money/ens";
 ```
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `ENS_REGISTRY_ADDRESS` | `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e` | ENS Registry |
+| `ENS_PUBLIC_RESOLVER_SEPOLIA` | `0x8FADE66B79cC9f707aB26799354482EB93a5B7dD` | Sepolia resolver |
+| `PREDICT_ETH_PARENT` | `predict.eth` | Parent domain |
 
 ## License
 
 MIT
-

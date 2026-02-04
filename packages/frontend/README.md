@@ -1,6 +1,6 @@
 # @hack-money/frontend
 
-Next.js frontend for ENS Prediction Markets. Features market discovery, betting interface, and market creation.
+Next.js frontend for ENS Prediction Markets. Features market discovery, betting interface, privacy-preserving bets, and market creation.
 
 ## Features
 
@@ -8,10 +8,13 @@ Next.js frontend for ENS Prediction Markets. Features market discovery, betting 
 - Market creation with ENS registration
 - Wallet connection via RainbowKit
 - Real-time odds display
+- Privacy-preserving betting (commit-reveal)
+- Interactive demo walkthrough
+- ENS data visualization
 
 ## Tech Stack
 
-- Next.js 14 (App Router)
+- Next.js 16 (App Router)
 - React 18
 - Tailwind CSS
 - wagmi v2
@@ -32,6 +35,8 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+Contract addresses are auto-generated from deployment artifacts on startup.
 
 ## Build
 
@@ -58,9 +63,11 @@ Browse all active prediction markets with filters and search.
 Individual market page with:
 
 - Current odds display
-- Betting panel
+- Betting panel (standard)
+- Private betting panel (commit-reveal)
 - Position management
 - Resolution criteria
+- ENS data visualization
 
 ### Create (`/create`)
 
@@ -70,11 +77,21 @@ Create new prediction markets:
 - Configure expiry
 - Define resolution criteria
 
+### Demo (`/demo`)
+
+Interactive hackathon demo showcasing:
+
+- Market creation flow
+- Standard betting
+- Private betting (commit-reveal)
+- Winning redemption
+- Toggle between mock and live modes
+
 ## Components
 
 ### Navbar
 
-Navigation with wallet connection.
+Navigation with wallet connection and demo link.
 
 ### MarketCard
 
@@ -82,22 +99,75 @@ Market preview with odds and volume.
 
 ### BetPanel
 
-Betting interface with outcome selection and amount input.
+Standard betting interface with outcome selection and amount input.
+
+### PrivateBetPanel
+
+Privacy-preserving betting with commit-reveal mechanism:
+
+- Commit phase: Submit hidden bet hash
+- Reveal phase: Reveal outcome + salt
+- Settlement: Batch execution at uniform price
 
 ### PositionManager
 
 Display and manage user positions.
 
+### ENSDataViewer
+
+Expandable component showing how market data is stored in ENS text records.
+
 ## Hooks
 
-### useMarketFromENS
+### useMarketData
 
-Fetch market data from ENS text records:
+Fetch market data from ENS text records and on-chain state:
 
 ```typescript
-const { market, isLoading, error } = useMarketFromENS("btc-100k.predict.eth");
+const { market, isLoading, error } = useMarketData("btc-100k");
 ```
 
+### usePrivateBetting
+
+Manage commit-reveal betting flow:
+
+```typescript
+const {
+  commitBet,
+  revealBet,
+  claimWinnings,
+  batchInfo,
+  commitment,
+  getPhase,
+  getTimeRemaining,
+} = usePrivateBetting(poolKey);
+```
+
+### useBetActions
+
+Standard betting operations:
+
+```typescript
+const { placeBet, claimWinnings, isBetting } = useBetActions(poolKey);
+```
+
+### useCreateMarket
+
+Market creation flow:
+
+```typescript
+const { createMarket, isLoading, marketId } = useCreateMarket();
+```
+
+## Auto-Generated Contracts
+
+Contract addresses are automatically synced from Foundry deployment artifacts:
+
+```bash
+pnpm generate-contracts
+```
+
+This runs automatically on `pnpm dev` and `pnpm build`.
 
 ## Styling
 
@@ -126,4 +196,3 @@ pnpm export
 ## License
 
 MIT
-
