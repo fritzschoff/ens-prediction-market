@@ -6,6 +6,7 @@ import {
   CONTRACTS,
   MARKET_FACTORY_ABI,
   PREDICTION_HOOK_ABI,
+  ERC20_ABI,
 } from '@/lib/contracts';
 import { Address, formatEther, zeroAddress } from 'viem';
 
@@ -133,6 +134,35 @@ export function useMarkets() {
           if (hookMarket?.resolved) {
             yesPrice = hookMarket.outcome ? 1 : 0;
             noPrice = hookMarket.outcome ? 0 : 1;
+          } else if (marketInfo.yesToken && marketInfo.noToken && marketInfo.yesToken !== zeroAddress && marketInfo.noToken !== zeroAddress) {
+            try {
+              const [yesSupply, noSupply] = await Promise.all([
+                publicClient.readContract({
+                  address: marketInfo.yesToken,
+                  abi: ERC20_ABI,
+                  functionName: 'totalSupply',
+                }),
+                publicClient.readContract({
+                  address: marketInfo.noToken,
+                  abi: ERC20_ABI,
+                  functionName: 'totalSupply',
+                }),
+              ]);
+
+              const totalSupply = yesSupply + noSupply;
+              if (totalSupply > 0n) {
+                const yesNum = Number(yesSupply);
+                const noNum = Number(noSupply);
+                const totalNum = yesNum + noNum;
+                
+                if (totalNum > 0) {
+                  yesPrice = yesNum / totalNum;
+                  noPrice = noNum / totalNum;
+                }
+              }
+            } catch (err) {
+              console.warn('Failed to fetch token supplies:', err);
+            }
           }
 
           const ensName = marketInfo.ensName || undefined;

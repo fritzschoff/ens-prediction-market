@@ -75,8 +75,8 @@ export default function HomePage() {
               question={market.question}
               ensName={market.ensName}
               expiry={market.expiry}
-              yesPrice={market.yesPrice || 0.5}
-              noPrice={market.noPrice || 0.5}
+              yesPrice={market.yesPrice ?? 0.5}
+              noPrice={market.noPrice ?? 0.5}
               totalVolume={market.totalVolume || '0 ETH'}
               resolved={market.resolved}
               outcome={market.outcome}
