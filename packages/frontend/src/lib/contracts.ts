@@ -1,9 +1,9 @@
 import { Address } from "viem";
 
 export const CONTRACTS = {
-  MARKET_FACTORY: "0x5ab4d6d9c05f28bff69ad48cab9d119803ac7a16" as Address,
-  PREDICTION_HOOK: "0x3e59cd5f19ba3affdd77aaf2cb7a1a72282e3ac0" as Address,
-  PRIVATE_BETTING_HOOK: "0x38498093d43e1d9b3fb86f492c64ceb9eb902880" as Address,
+  MARKET_FACTORY: "0xc8e9fb7e459f9e684d1416e021c28ae155151447" as Address,
+  PREDICTION_HOOK: "0xc8af775a8c11b217581d4850d1d02296c953bac0" as Address,
+  PRIVATE_BETTING_HOOK: "0x084221ad397e63444fb9791ef0bccbc277436880" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [
@@ -20,6 +20,11 @@ export const MARKET_FACTORY_ABI = [
   {
     inputs: [],
     name: "InvalidOracle",
+    type: "error",
+  },
+  {
+    inputs: [],
+    name: "ENSNameTaken",
     type: "error",
   },
   {

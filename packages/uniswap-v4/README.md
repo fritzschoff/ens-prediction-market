@@ -4,11 +4,12 @@ Uniswap v4 smart contracts for privacy-preserving prediction markets. This packa
 
 ## Deployed Contracts (Sepolia)
 
-| Contract | Address |
-|----------|---------|
-| MarketFactory | `0x5ab4d6d9c05f28bff69ad48cab9d119803ac7a16` |
-| PredictionMarketHook | `0x3e59cd5f19ba3affdd77aaf2cb7a1a72282e3ac0` |
-| PrivateBettingHook | `0x38498093d43e1d9b3fb86f492c64ceb9eb902880` |
+| Contract             | Address                                      |
+| -------------------- | -------------------------------------------- |
+| MarketFactory        | `0xC8e9fB7E459F9E684D1416e021C28Ae155151447` |
+| PredictionMarketHook | `0xC8AF775a8C11B217581d4850d1d02296C953bAC0` |
+| PrivateBettingHook   | `0x084221ad397e63444fB9791ef0BCcBC277436880` |
+| SubdomainRegistrar   | `0x377ab09a61f16333e68733f85cdc6D54d729AC48` |
 
 ## Prize Track: Uniswap v4 Privacy DeFi
 

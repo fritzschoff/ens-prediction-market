@@ -21,40 +21,40 @@ pnpm add @hack-money/ens
 ### Reading Market Records
 
 ```typescript
-import { createPublicClient, http } from "viem";
-import { sepolia } from "viem/chains";
-import { resolveMarketFromENS } from "@hack-money/ens";
+import { createPublicClient, http } from 'viem';
+import { sepolia } from 'viem/chains';
+import { resolveMarketFromENS } from '@hack-money/ens';
 
 const client = createPublicClient({
   chain: sepolia,
   transport: http(),
 });
 
-const market = await resolveMarketFromENS(client, "btc-100k.predict.eth");
+const market = await resolveMarketFromENS(client, 'btc-100k.predict.eth');
 
 if (market) {
-  console.log("Pool:", market.pool);
-  console.log("Oracle:", market.oracle);
-  console.log("Expiry:", new Date(market.expiry * 1000));
+  console.log('Pool:', market.pool);
+  console.log('Oracle:', market.oracle);
+  console.log('Expiry:', new Date(market.expiry * 1000));
 }
 ```
 
 ### Writing Market Records
 
 ```typescript
-import { encodeSetMarketRecords } from "@hack-money/ens";
+import { encodeSetMarketRecords } from '@hack-money/ens';
 
 const tx = encodeSetMarketRecords({
-  name: "btc-100k.predict.eth",
+  name: 'btc-100k.predict.eth',
   records: {
-    pool: "0x...",
-    oracle: "0x...",
+    pool: '0x...',
+    oracle: '0x...',
     expiry: 1735689600,
-    criteria: "ipfs://Qm...",
-    yesToken: "0x...",
-    noToken: "0x...",
-    creator: "vitalik.eth",
-    marketId: "0x...",
+    criteria: 'ipfs://Qm...',
+    yesToken: '0x...',
+    noToken: '0x...',
+    creator: 'vitalik.eth',
+    marketId: '0x...',
   },
 });
 
@@ -63,16 +63,16 @@ await walletClient.sendTransaction(tx);
 
 ## Text Record Schema
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `pool` | Address | Uniswap v4 pool/hook address |
-| `oracle` | Address | Market resolution oracle |
-| `expiry` | Number | Unix timestamp for market expiry |
-| `criteria` | String | Resolution criteria text or IPFS hash |
-| `yesToken` | Address | YES outcome token address |
-| `noToken` | Address | NO outcome token address |
-| `creator` | String | Address or ENS name of market creator |
-| `marketId` | String | Unique market identifier (bytes32) |
+| Key        | Type    | Description                           |
+| ---------- | ------- | ------------------------------------- |
+| `pool`     | Address | Uniswap v4 pool/hook address          |
+| `oracle`   | Address | Market resolution oracle              |
+| `expiry`   | Number  | Unix timestamp for market expiry      |
+| `criteria` | String  | Resolution criteria text or IPFS hash |
+| `yesToken` | Address | YES outcome token address             |
+| `noToken`  | Address | NO outcome token address              |
+| `creator`  | String  | Address or ENS name of market creator |
+| `marketId` | String  | Unique market identifier (bytes32)    |
 
 ## API Reference
 
@@ -109,19 +109,25 @@ Computes the namehash for a subdomain.
 ## Constants
 
 ```typescript
-import { 
-  MARKET_RECORD_KEYS, 
+import {
+  MARKET_RECORD_KEYS,
   ENS_PUBLIC_RESOLVER_SEPOLIA,
   ENS_REGISTRY_ADDRESS,
-  PREDICT_ETH_PARENT 
-} from "@hack-money/ens";
+  PREDICT_ETH_PARENT,
+} from '@hack-money/ens';
 ```
 
-| Constant | Value | Description |
-|----------|-------|-------------|
-| `ENS_REGISTRY_ADDRESS` | `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e` | ENS Registry |
+| Constant                      | Value                                        | Description      |
+| ----------------------------- | -------------------------------------------- | ---------------- |
+| `ENS_REGISTRY_ADDRESS`        | `0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e` | ENS Registry     |
 | `ENS_PUBLIC_RESOLVER_SEPOLIA` | `0x8FADE66B79cC9f707aB26799354482EB93a5B7dD` | Sepolia resolver |
-| `PREDICT_ETH_PARENT` | `predict.eth` | Parent domain |
+| `PREDICT_ETH_PARENT`          | `predict.eth`                                | Parent domain    |
+
+## Deployed Contracts (Sepolia)
+
+| Contract           | Address                                      |
+| ------------------ | -------------------------------------------- |
+| SubdomainRegistrar | `0x377ab09a61f16333e68733f85cdc6D54d729AC48` |
 
 ## License
 

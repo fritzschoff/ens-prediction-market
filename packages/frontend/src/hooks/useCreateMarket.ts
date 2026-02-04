@@ -195,6 +195,7 @@ export function useCreateMarket() {
                     '0x9589a27d': 'InvalidOracle',
                     '0x72b13ad8': 'InvalidExpiry',
                     '0x6d705ebb': 'EmptyQuestion',
+                    '0x8c5be1e5': 'ENSNameTaken',
                   };
 
                   const errorName = selectorMap[errorSelector];
@@ -329,6 +330,7 @@ export function useCreateMarket() {
                     '0x9589a27d': 'InvalidOracle',
                     '0x72b13ad8': 'InvalidExpiry',
                     '0x6d705ebb': 'EmptyQuestion',
+                    '0x8c5be1e5': 'ENSNameTaken',
                   };
 
                   const errorName = selectorMap[errorSelector];

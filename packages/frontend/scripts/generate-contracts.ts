@@ -91,6 +91,11 @@ export const MARKET_FACTORY_ABI = [
     type: "error",
   },
   {
+    inputs: [],
+    name: "ENSNameTaken",
+    type: "error",
+  },
+  {
     inputs: [
       {
         components: [
