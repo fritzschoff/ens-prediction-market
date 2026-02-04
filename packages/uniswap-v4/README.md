@@ -8,7 +8,7 @@ Uniswap v4 smart contracts for privacy-preserving prediction markets. This packa
 | -------------------- | -------------------------------------------- |
 | MarketFactory        | `0xC8e9fB7E459F9E684D1416e021C28Ae155151447` |
 | PredictionMarketHook | `0xC8AF775a8C11B217581d4850d1d02296C953bAC0` |
-| PrivateBettingHook   | `0x084221ad397e63444fB9791ef0BCcBC277436880` |
+| PrivateBettingHook   | `0xe2C531380D9e60262AcD3984E6De131a4001e880` |
 | SubdomainRegistrar   | `0x377ab09a61f16333e68733f85cdc6D54d729AC48` |
 
 ## Prize Track: Uniswap v4 Privacy DeFi

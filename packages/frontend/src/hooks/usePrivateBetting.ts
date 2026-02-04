@@ -7,7 +7,7 @@ import {
   useWaitForTransactionReceipt,
   usePublicClient,
 } from 'wagmi';
-import { CONTRACTS } from '@/lib/contracts';
+import { CONTRACTS, PREDICTION_HOOK_ABI } from '@/lib/contracts';
 import {
   Address,
   keccak256,
@@ -37,11 +37,10 @@ const PRIVATE_BETTING_HOOK_ABI = [
         type: 'tuple',
       },
       { name: 'commitHash', type: 'bytes32' },
-      { name: 'amount', type: 'uint256' },
     ],
     name: 'commitBet',
     outputs: [],
-    stateMutability: 'nonpayable',
+    stateMutability: 'payable',
     type: 'function',
   },
   {
@@ -210,7 +209,6 @@ const PRIVATE_BETTING_HOOK_ABI = [
         components: [
           { name: 'yesToken', type: 'address' },
           { name: 'noToken', type: 'address' },
-          { name: 'collateralToken', type: 'address' },
           { name: 'oracle', type: 'address' },
           { name: 'expiry', type: 'uint256' },
           { name: 'resolved', type: 'bool' },
@@ -296,7 +294,6 @@ export interface Commitment {
 export interface PrivateMarket {
   yesToken: Address;
   noToken: Address;
-  collateralToken: Address;
   oracle: Address;
   expiry: bigint;
   resolved: boolean;
@@ -348,14 +345,16 @@ function clearBetData(poolId: string, address: string): void {
 }
 
 const ERROR_MESSAGES: Record<string, string> = {
-  MarketNotInitialized: 'Market has not been initialized.',
+  MarketNotInitialized:
+    'This market has not been initialized for private betting. The market creator needs to initialize it first.',
   MarketExpired: 'This market has expired.',
   MarketNotExpired: 'Market has not expired yet.',
   MarketAlreadyResolved: 'This market has already been resolved.',
   MarketNotResolved: 'This market has not been resolved yet.',
   OnlyOracle: 'Only the oracle can perform this action.',
   InvalidExpiry: 'Invalid expiry time.',
-  CommitmentAlreadyExists: 'You already have an active commitment.',
+  CommitmentAlreadyExists:
+    'You already have an active commitment. Please reveal or wait for it to settle first.',
   NoCommitment: 'No commitment found.',
   AlreadyRevealed: 'Bet has already been revealed.',
   RevealWindowNotOpen: 'Reveal window is not open yet.',
@@ -373,7 +372,7 @@ function parseContractError(err: unknown): string {
   }
 
   const cause = (err as any).cause;
-  const data = cause?.data || cause?.error?.data;
+  const data = cause?.data || cause?.error?.data || cause?.reason?.data;
 
   if (data && typeof data === 'string' && data.startsWith('0x')) {
     try {
@@ -385,8 +384,46 @@ function parseContractError(err: unknown): string {
         return ERROR_MESSAGES[decoded.errorName];
       }
       return `Contract error: ${decoded.errorName || 'Unknown'}`;
-    } catch {
-      return err.message || 'Transaction failed';
+    } catch {}
+  }
+
+  const message = err.message || cause?.message || cause?.shortMessage || '';
+
+  if (message.includes('User rejected') || message.includes('user rejected')) {
+    return 'Transaction was rejected';
+  }
+
+  if (
+    message.includes('insufficient allowance') ||
+    message.includes('ERC20InsufficientAllowance')
+  ) {
+    return 'Insufficient token allowance. Please approve the contract to spend your tokens first.';
+  }
+
+  if (
+    message.includes('insufficient balance') ||
+    message.includes('ERC20InsufficientBalance')
+  ) {
+    return 'Insufficient token balance.';
+  }
+
+  if (message.includes('execution reverted')) {
+    const match = message.match(/execution reverted:?\s*(.+)/i);
+    if (match && match[1]) {
+      const revertReason = match[1].trim();
+      if (revertReason.startsWith('0x')) {
+        try {
+          const decoded = decodeErrorResult({
+            abi: PRIVATE_BETTING_HOOK_ABI,
+            data: revertReason as `0x${string}`,
+          });
+          if (decoded.errorName && ERROR_MESSAGES[decoded.errorName]) {
+            return ERROR_MESSAGES[decoded.errorName];
+          }
+        } catch {}
+      } else {
+        return revertReason;
+      }
     }
   }
 
@@ -394,11 +431,11 @@ function parseContractError(err: unknown): string {
     return cause.shortMessage;
   }
 
-  if (err.message.includes('User rejected')) {
-    return 'Transaction was rejected';
+  if (message) {
+    return message;
   }
 
-  return err.message || 'Transaction failed';
+  return 'Transaction failed. Please check your token balance and allowance.';
 }
 
 function generateSalt(): `0x${string}` {
@@ -547,7 +584,41 @@ export function usePrivateBetting(poolKey: PoolKey | undefined) {
         args: [poolKey],
       });
 
-      setMarket(mkt as PrivateMarket);
+      const privateMarket = mkt as PrivateMarket;
+
+      if (
+        privateMarket.yesToken === '0x0000000000000000000000000000000000000000'
+      ) {
+        try {
+          const regularMarket = await publicClient.readContract({
+            address: CONTRACTS.PREDICTION_HOOK,
+            abi: PREDICTION_HOOK_ABI,
+            functionName: 'getMarket',
+            args: [poolKey],
+          });
+
+          if (
+            regularMarket &&
+            regularMarket.yesToken !==
+              '0x0000000000000000000000000000000000000000'
+          ) {
+            setMarket({
+              yesToken: regularMarket.yesToken,
+              noToken: regularMarket.noToken,
+              oracle: regularMarket.oracle,
+              expiry: regularMarket.expiry,
+              resolved: regularMarket.resolved,
+              outcome: regularMarket.outcome,
+              currentBatchId: 0n,
+            });
+            return;
+          }
+        } catch (err) {
+          console.warn('Failed to fetch regular market data:', err);
+        }
+      }
+
+      setMarket(privateMarket);
     } catch (err) {
       console.error('Failed to fetch market:', err);
     }
@@ -633,23 +704,35 @@ export function usePrivateBetting(poolKey: PoolKey | undefined) {
           timestamp: Date.now(),
         });
 
-        await publicClient.simulateContract({
-          address: PRIVATE_BETTING_HOOK_ADDRESS,
-          abi: PRIVATE_BETTING_HOOK_ABI,
-          functionName: 'commitBet',
-          args: [poolKey, commitHash, amount],
-          account: address,
-        });
+        try {
+          await publicClient.simulateContract({
+            address: PRIVATE_BETTING_HOOK_ADDRESS,
+            abi: PRIVATE_BETTING_HOOK_ABI,
+            functionName: 'commitBet',
+            args: [poolKey, commitHash],
+            value: amount,
+            account: address,
+          });
+        } catch (simErr) {
+          const errorMessage = parseContractError(simErr);
+          const error = new Error(errorMessage);
+          setError(error);
+          throw error;
+        }
 
         writeCommit({
           address: PRIVATE_BETTING_HOOK_ADDRESS,
           abi: PRIVATE_BETTING_HOOK_ABI,
           functionName: 'commitBet',
-          args: [poolKey, commitHash, amount],
+          args: [poolKey, commitHash],
+          value: amount,
         });
 
         return { commitHash, salt, outcome };
       } catch (err) {
+        if (err instanceof Error && err.message) {
+          throw err;
+        }
         const errorMessage = parseContractError(err);
         const error = new Error(errorMessage);
         setError(error);

@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { useAccount } from "wagmi";
-import { cn } from "@/lib/utils";
-import { usePrivateBetting, PoolKey } from "@/hooks/usePrivateBetting";
-import { formatEther } from "viem";
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
+import { cn } from '@/lib/utils';
+import { usePrivateBetting, PoolKey } from '@/hooks/usePrivateBetting';
+import { formatEther } from 'viem';
 
 interface PrivateBetPanelProps {
   poolKey?: PoolKey;
@@ -14,7 +14,7 @@ interface PrivateBetPanelProps {
 export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
   const { address, isConnected } = useAccount();
   const [selectedOutcome, setSelectedOutcome] = useState<boolean | null>(null);
-  const [amount, setAmount] = useState("");
+  const [amount, setAmount] = useState('');
   const [timeRemaining, setTimeRemaining] = useState(0);
 
   const {
@@ -44,8 +44,11 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
   const hasCommitment =
     commitment &&
     commitment.commitHash !==
-      "0x0000000000000000000000000000000000000000000000000000000000000000";
+      '0x0000000000000000000000000000000000000000000000000000000000000000';
   const isRevealed = commitment?.revealed;
+
+  const effectivePhase =
+    phase === 'settled' && !hasCommitment ? 'commit' : phase;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -57,7 +60,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   const handleCommit = async () => {
@@ -65,7 +68,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
     try {
       await commitBet(amount, selectedOutcome);
     } catch (err) {
-      console.error("Commit failed:", err);
+      console.error('Commit failed:', err);
     }
   };
 
@@ -73,7 +76,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
     try {
       await revealBet();
     } catch (err) {
-      console.error("Reveal failed:", err);
+      console.error('Reveal failed:', err);
     }
   };
 
@@ -81,7 +84,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
     try {
       await claimWinnings();
     } catch (err) {
-      console.error("Claim failed:", err);
+      console.error('Claim failed:', err);
     }
   };
 
@@ -91,15 +94,22 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
         <h3 className="text-lg font-semibold text-slate-100">Private Bet</h3>
         <div
           className={cn(
-            "rounded-full px-3 py-1 text-xs font-medium",
-            phase === "commit" && "bg-indigo-500/10 text-indigo-400",
-            phase === "reveal" && "bg-amber-500/10 text-amber-400",
-            phase === "settled" && "bg-emerald-500/10 text-emerald-400"
+            'rounded-full px-3 py-1 text-xs font-medium',
+            effectivePhase === 'commit' && 'bg-indigo-500/10 text-indigo-400',
+            effectivePhase === 'reveal' && 'bg-amber-500/10 text-amber-400',
+            effectivePhase === 'settled' && 'bg-emerald-500/10 text-emerald-400'
           )}
         >
-          {phase === "commit" && `Commit: ${formatTime(timeRemaining)}`}
-          {phase === "reveal" && `Reveal: ${formatTime(timeRemaining)}`}
-          {phase === "settled" && "Settled"}
+          {effectivePhase === 'commit' &&
+            phase === 'settled' &&
+            !hasCommitment &&
+            'Ready to Commit'}
+          {effectivePhase === 'commit' &&
+            phase !== 'settled' &&
+            `Commit: ${formatTime(timeRemaining)}`}
+          {effectivePhase === 'reveal' &&
+            `Reveal: ${formatTime(timeRemaining)}`}
+          {effectivePhase === 'settled' && 'Settled'}
         </div>
       </div>
 
@@ -108,10 +118,51 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
           <div className="flex items-center gap-2 text-sm text-amber-400">
             <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
             <span className="font-medium">Demo Mode</span>
-            <span className="text-amber-400/60">- Contract not yet deployed</span>
+            <span className="text-amber-400/60">
+              - Contract not yet deployed
+            </span>
           </div>
         </div>
       )}
+
+      {market &&
+        market.yesToken !== '0x0000000000000000000000000000000000000000' &&
+        market.collateralToken ===
+          '0x0000000000000000000000000000000000000000' && (
+          <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3">
+            <div className="flex items-start gap-2 text-sm text-amber-400">
+              <span className="h-2 w-2 rounded-full bg-amber-400 mt-1.5" />
+              <div>
+                <span className="font-medium">
+                  Market Partially Initialized
+                </span>
+                <p className="text-xs text-amber-400/80 mt-1">
+                  This market exists but needs to be fully initialized in the
+                  PrivateBettingHook contract to enable private betting. The
+                  market creator needs to call initializeMarket with the
+                  collateral token address.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+      {market &&
+        market.yesToken === '0x0000000000000000000000000000000000000000' && (
+          <div className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 p-3">
+            <div className="flex items-start gap-2 text-sm text-red-400">
+              <span className="h-2 w-2 rounded-full bg-red-400 mt-1.5" />
+              <div>
+                <span className="font-medium">Market Not Initialized</span>
+                <p className="text-xs text-red-400/80 mt-1">
+                  This market has not been initialized for private betting. The
+                  market creator needs to initialize it in the
+                  PrivateBettingHook contract first.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
       <div className="mb-4 rounded-xl bg-slate-800/30 p-4">
         <div className="flex items-start gap-3">
@@ -119,10 +170,18 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
             <span className="text-xs text-indigo-400">i</span>
           </div>
           <div className="text-sm text-slate-400">
-            <p className="font-medium text-slate-300 mb-1">Privacy Protected</p>
-            <p>
-              Your bet direction (YES/NO) is hidden until the reveal phase. No
-              one can front-run your position.
+            <p className="font-medium text-slate-300 mb-1">
+              Privacy Protected Betting
+            </p>
+            <p className="mb-2">
+              This is separate from regular betting. Your bet direction (YES/NO)
+              is hidden until the reveal phase. No one can front-run your
+              position.
+            </p>
+            <p className="text-xs text-slate-500">
+              <strong>How it works:</strong> 1) Commit your bet (hidden), 2)
+              Wait for reveal phase, 3) Reveal your bet, 4) Claim winnings after
+              market resolves.
             </p>
           </div>
         </div>
@@ -146,28 +205,32 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">YES Bets:</span>
-              <span className="text-slate-300">{batchInfo.yesCount.toString()}</span>
+              <span className="text-slate-300">
+                {batchInfo.yesCount.toString()}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-500">NO Bets:</span>
-              <span className="text-slate-300">{batchInfo.noCount.toString()}</span>
+              <span className="text-slate-300">
+                {batchInfo.noCount.toString()}
+              </span>
             </div>
           </div>
         </div>
       )}
 
-      {phase === "commit" && !hasCommitment && (
+      {effectivePhase === 'commit' && !hasCommitment && (
         <>
           <div className="mb-4 flex gap-3">
             <button
               onClick={() => setSelectedOutcome(true)}
               disabled={disabled || isCommitting}
               className={cn(
-                "flex-1 rounded-xl p-4 text-center transition-all",
+                'flex-1 rounded-xl p-4 text-center transition-all',
                 selectedOutcome === true
-                  ? "bg-emerald-500 text-white ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900"
-                  : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20",
-                (disabled || isCommitting) && "opacity-50 cursor-not-allowed"
+                  ? 'bg-emerald-500 text-white ring-2 ring-emerald-400 ring-offset-2 ring-offset-slate-900'
+                  : 'bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20',
+                (disabled || isCommitting) && 'opacity-50 cursor-not-allowed'
               )}
             >
               <div className="text-xl font-bold">YES</div>
@@ -177,11 +240,11 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
               onClick={() => setSelectedOutcome(false)}
               disabled={disabled || isCommitting}
               className={cn(
-                "flex-1 rounded-xl p-4 text-center transition-all",
+                'flex-1 rounded-xl p-4 text-center transition-all',
                 selectedOutcome === false
-                  ? "bg-rose-500 text-white ring-2 ring-rose-400 ring-offset-2 ring-offset-slate-900"
-                  : "bg-rose-500/10 text-rose-400 hover:bg-rose-500/20",
-                (disabled || isCommitting) && "opacity-50 cursor-not-allowed"
+                  ? 'bg-rose-500 text-white ring-2 ring-rose-400 ring-offset-2 ring-offset-slate-900'
+                  : 'bg-rose-500/10 text-rose-400 hover:bg-rose-500/20',
+                (disabled || isCommitting) && 'opacity-50 cursor-not-allowed'
               )}
             >
               <div className="text-xl font-bold">NO</div>
@@ -206,7 +269,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
           </div>
 
           <div className="mb-4 flex gap-2">
-            {["0.01", "0.05", "0.1", "0.5"].map((preset) => (
+            {['0.01', '0.05', '0.1', '0.5'].map((preset) => (
               <button
                 key={preset}
                 onClick={() => setAmount(preset)}
@@ -259,15 +322,15 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
                 Committing...
               </span>
             ) : !isConnected ? (
-              "Connect Wallet"
+              'Connect Wallet'
             ) : (
-              "Commit Hidden Bet"
+              'Commit Hidden Bet'
             )}
           </button>
         </>
       )}
 
-      {phase === "commit" && hasCommitment && (
+      {effectivePhase === 'commit' && hasCommitment && (
         <div className="text-center py-8">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
             <svg
@@ -292,7 +355,8 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
             <div className="mt-4 rounded-lg bg-slate-800/50 p-3">
               <div className="text-xs text-slate-500 mb-1">Your commitment</div>
               <div className="text-sm text-slate-300">
-                {storedBetData.outcome ? "YES" : "NO"} • {storedBetData.amount} ETH
+                {storedBetData.outcome ? 'YES' : 'NO'} • {storedBetData.amount}{' '}
+                ETH
               </div>
             </div>
           )}
@@ -302,7 +366,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
         </div>
       )}
 
-      {phase === "reveal" && hasCommitment && !isRevealed && (
+      {effectivePhase === 'reveal' && hasCommitment && !isRevealed && (
         <div className="text-center py-4">
           <p className="mb-4 text-slate-300">
             Reveal phase is open. Complete your bet now.
@@ -311,7 +375,8 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
             <div className="mb-4 rounded-lg bg-slate-800/50 p-3">
               <div className="text-xs text-slate-500 mb-1">Revealing</div>
               <div className="text-sm text-slate-300">
-                {storedBetData.outcome ? "YES" : "NO"} • {storedBetData.amount} ETH
+                {storedBetData.outcome ? 'YES' : 'NO'} • {storedBetData.amount}{' '}
+                ETH
               </div>
             </div>
           )}
@@ -349,7 +414,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
                 Revealing...
               </span>
             ) : (
-              "Reveal Bet"
+              'Reveal Bet'
             )}
           </button>
           {!storedBetData && (
@@ -360,7 +425,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
         </div>
       )}
 
-      {phase === "reveal" && hasCommitment && isRevealed && (
+      {effectivePhase === 'reveal' && hasCommitment && isRevealed && (
         <div className="text-center py-8">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
             <svg
@@ -384,13 +449,13 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
         </div>
       )}
 
-      {phase === "reveal" && !hasCommitment && (
+      {effectivePhase === 'reveal' && !hasCommitment && (
         <div className="text-center py-8 text-slate-400">
           <p>Commit phase ended. Wait for the next batch.</p>
         </div>
       )}
 
-      {phase === "settled" && (
+      {effectivePhase === 'settled' && hasCommitment && (
         <div className="text-center py-4">
           <div className="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
             <svg
@@ -403,17 +468,19 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
               <path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </div>
-          <p className="text-lg font-medium text-slate-100 mb-2">Batch Settled</p>
+          <p className="text-lg font-medium text-slate-100 mb-2">
+            Batch Settled
+          </p>
           {market?.resolved && (
             <div
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-4",
+                'inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-sm font-medium mb-4',
                 market.outcome
-                  ? "bg-emerald-500/10 text-emerald-400"
-                  : "bg-rose-500/10 text-rose-400"
+                  ? 'bg-emerald-500/10 text-emerald-400'
+                  : 'bg-rose-500/10 text-rose-400'
               )}
             >
-              Market Resolved: {market.outcome ? "YES" : "NO"}
+              Market Resolved: {market.outcome ? 'YES' : 'NO'}
             </div>
           )}
           {storedBetData && market?.resolved && (
@@ -452,7 +519,7 @@ export function PrivateBetPanel({ poolKey, disabled }: PrivateBetPanelProps) {
                     Claiming...
                   </span>
                 ) : (
-                  "Claim Winnings"
+                  'Claim Winnings'
                 )}
               </button>
             </>

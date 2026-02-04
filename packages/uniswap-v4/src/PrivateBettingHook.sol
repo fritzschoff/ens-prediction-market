@@ -14,14 +14,9 @@ import {
     ModifyLiquidityParams,
     SwapParams
 } from "@uniswap/v4-core/src/types/PoolOperation.sol";
-import {
-    SafeERC20
-} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PrivateBettingHook is BaseHook {
     using PoolIdLibrary for PoolKey;
-    using SafeERC20 for IERC20;
 
     uint256 public constant BATCH_DURATION = 5 minutes;
     uint256 public constant REVEAL_WINDOW = 10 minutes;
@@ -46,7 +41,6 @@ contract PrivateBettingHook is BaseHook {
     struct Market {
         address yesToken;
         address noToken;
-        address collateralToken;
         address oracle;
         uint256 expiry;
         bool resolved;
@@ -62,7 +56,6 @@ contract PrivateBettingHook is BaseHook {
         PoolId indexed poolId,
         address yesToken,
         address noToken,
-        address collateralToken,
         address oracle,
         uint256 expiry
     );
@@ -111,8 +104,11 @@ contract PrivateBettingHook is BaseHook {
     error AlreadyExecuted();
     error NoWinnings();
     error InsufficientAmount();
+    error TransferFailed();
 
     constructor(IPoolManager _poolManager) BaseHook(_poolManager) {}
+
+    receive() external payable {}
 
     function getHookPermissions()
         public
@@ -143,7 +139,6 @@ contract PrivateBettingHook is BaseHook {
         PoolKey calldata key,
         address yesToken,
         address noToken,
-        address collateralToken,
         address oracle,
         uint256 expiry
     ) external {
@@ -154,7 +149,6 @@ contract PrivateBettingHook is BaseHook {
         markets[poolId] = Market({
             yesToken: yesToken,
             noToken: noToken,
-            collateralToken: collateralToken,
             oracle: oracle,
             expiry: expiry,
             resolved: false,
@@ -171,14 +165,7 @@ contract PrivateBettingHook is BaseHook {
             settled: false
         });
 
-        emit MarketCreated(
-            poolId,
-            yesToken,
-            noToken,
-            collateralToken,
-            oracle,
-            expiry
-        );
+        emit MarketCreated(poolId, yesToken, noToken, oracle, expiry);
     }
 
     function _beforeInitialize(
@@ -227,10 +214,9 @@ contract PrivateBettingHook is BaseHook {
 
     function commitBet(
         PoolKey calldata key,
-        bytes32 commitHash,
-        uint256 amount
-    ) external {
-        if (amount == 0) revert InsufficientAmount();
+        bytes32 commitHash
+    ) external payable {
+        if (msg.value == 0) revert InsufficientAmount();
 
         PoolId poolId = key.toId();
         Market storage market = markets[poolId];
@@ -260,15 +246,9 @@ contract PrivateBettingHook is BaseHook {
             });
         }
 
-        IERC20(market.collateralToken).safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
-
         commitments[poolId][msg.sender] = Commitment({
             commitHash: commitHash,
-            amount: amount,
+            amount: msg.value,
             batchId: currentBatchId,
             revealed: false,
             executed: false
@@ -278,7 +258,7 @@ contract PrivateBettingHook is BaseHook {
             poolId,
             msg.sender,
             commitHash,
-            amount,
+            msg.value,
             currentBatchId
         );
     }
@@ -407,7 +387,8 @@ contract PrivateBettingHook is BaseHook {
                 totalWinningPool;
         }
 
-        IERC20(market.collateralToken).safeTransfer(msg.sender, winnings);
+        (bool success, ) = payable(msg.sender).call{value: winnings}("");
+        if (!success) revert TransferFailed();
 
         emit WinningsClaimed(poolId, msg.sender, winnings);
     }
