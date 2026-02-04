@@ -1,6 +1,5 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm --filter @hack-money/ens build && pnpm --filter @hack-money/frontend build",
-  "framework": "nextjs",
-  "rootDirectory": "packages/frontend"
+  "framework": "nextjs"
 }
