@@ -6,10 +6,6 @@ const DEPLOY_BROADCAST_PATH = join(
   '../uniswap-v4/broadcast/Deploy.s.sol/11155111/run-latest.json'
 );
 
-const PRIVATE_HOOK_BROADCAST_PATH = join(
-  process.cwd(),
-  '../uniswap-v4/broadcast/DeployPrivateBettingHook.s.sol/11155111/run-latest.json'
-);
 
 const OUTPUT_PATH = join(process.cwd(), 'src/lib/contracts.ts');
 
@@ -31,8 +27,6 @@ function extractAddresses(broadcastData: BroadcastData) {
       addresses.PREDICTION_HOOK = tx.contractAddress;
     } else if (tx.contractName === 'MarketFactory') {
       addresses.MARKET_FACTORY = tx.contractAddress;
-    } else if (tx.contractName === 'PrivateBettingHook') {
-      addresses.PRIVATE_BETTING_HOOK = tx.contractAddress;
     }
   }
 
@@ -43,7 +37,6 @@ try {
   const addresses: Record<string, string> = {
     MARKET_FACTORY: '0x0000000000000000000000000000000000000000',
     PREDICTION_HOOK: '0x0000000000000000000000000000000000000000',
-    PRIVATE_BETTING_HOOK: '0x0000000000000000000000000000000000000000',
   };
 
   if (existsSync(DEPLOY_BROADCAST_PATH)) {
@@ -55,23 +48,12 @@ try {
     console.log('⚠️  Deploy.s.sol broadcast not found, using default addresses');
   }
 
-  if (existsSync(PRIVATE_HOOK_BROADCAST_PATH)) {
-    const broadcastContent = readFileSync(PRIVATE_HOOK_BROADCAST_PATH, 'utf-8');
-    const broadcastData: BroadcastData = JSON.parse(broadcastContent);
-    const privateHookAddresses = extractAddresses(broadcastData);
-    Object.assign(addresses, privateHookAddresses);
-  } else {
-    console.log(
-      '⚠️  DeployPrivateBettingHook.s.sol broadcast not found, using default address'
-    );
-  }
 
   const contractsFile = `import { Address } from "viem";
 
 export const CONTRACTS = {
   MARKET_FACTORY: "${addresses.MARKET_FACTORY}" as Address,
   PREDICTION_HOOK: "${addresses.PREDICTION_HOOK}" as Address,
-  PRIVATE_BETTING_HOOK: "${addresses.PRIVATE_BETTING_HOOK}" as Address,
 } as const;
 
 export const MARKET_FACTORY_ABI = [
@@ -285,7 +267,6 @@ export const ERC20_ABI = [
   console.log('✅ Generated contracts.ts from broadcast files');
   console.log(`   MARKET_FACTORY: ${addresses.MARKET_FACTORY}`);
   console.log(`   PREDICTION_HOOK: ${addresses.PREDICTION_HOOK}`);
-  console.log(`   PRIVATE_BETTING_HOOK: ${addresses.PRIVATE_BETTING_HOOK}`);
 } catch (error) {
   console.error('❌ Error generating contracts:', error);
   process.exit(1);

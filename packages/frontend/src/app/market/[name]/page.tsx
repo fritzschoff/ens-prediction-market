@@ -4,7 +4,6 @@ import { use, useEffect, useState } from 'react';
 import { BetPanel } from '@/components/BetPanel';
 import { PositionManager } from '@/components/PositionManager';
 import { ENSDataViewer } from '@/components/ENSDataViewer';
-import { PrivateBetPanel } from '@/components/PrivateBetPanel';
 import { formatDistanceToNow, shortenAddress } from '@/lib/utils';
 import { useMarketData, useEthPrice, useUserPositions, useBetActions } from '@/hooks';
 import { useAccount } from 'wagmi';
@@ -307,10 +306,6 @@ export default function MarketPage({ params }: MarketPageProps) {
             disabled={market.resolved}
             isLoading={isBetting}
             error={betError}
-          />
-          <PrivateBetPanel
-            poolKey={market.poolKey}
-            disabled={market.resolved}
           />
           <PositionManager
             positions={positions}

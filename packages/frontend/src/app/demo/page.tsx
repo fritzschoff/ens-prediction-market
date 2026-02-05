@@ -6,7 +6,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-type DemoStep = "create" | "bet" | "private" | "claim";
+type DemoStep = "create" | "bet" | "claim";
 type DemoMode = "mock" | "live";
 
 interface StepConfig {
@@ -34,17 +34,6 @@ const STEPS: StepConfig[] = [
     icon: (
       <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-  {
-    id: "private",
-    title: "Private Betting",
-    description: "Use commit-reveal for MEV-protected bets",
-    icon: (
-      <svg className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="3" y="11" width="18" height="11" rx="2" />
-        <path d="M7 11V7a5 5 0 0110 0v4" />
       </svg>
     ),
   },
@@ -196,15 +185,6 @@ export default function DemoPage() {
           )}
           {currentStep === "bet" && (
             <PlaceBetDemo
-              mode={mode}
-              isAnimating={mockAnimating}
-              progress={mockProgress}
-              onSimulate={simulateMockAction}
-              isConnected={isConnected}
-            />
-          )}
-          {currentStep === "private" && (
-            <PrivateBetDemo
               mode={mode}
               isAnimating={mockAnimating}
               progress={mockProgress}
@@ -632,197 +612,6 @@ function PlaceBetDemo({
   );
 }
 
-function PrivateBetDemo({
-  mode,
-  isAnimating,
-  progress,
-  onSimulate,
-  isConnected,
-}: {
-  mode: DemoMode;
-  isAnimating: boolean;
-  progress: number;
-  onSimulate: () => void;
-  isConnected: boolean;
-}) {
-  const [phase, setPhase] = useState<"commit" | "reveal">("commit");
-
-  return (
-    <div className="space-y-6">
-      <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Step 3: Private Betting</h2>
-        <p className="text-slate-400 mb-6">
-          Our commit-reveal mechanism protects you from MEV attacks. No one knows your 
-          position until the reveal phase!
-        </p>
-
-        <div className="rounded-xl border border-violet-500/20 bg-gradient-to-r from-violet-500/10 to-indigo-500/10 p-4 mb-6">
-          <h4 className="text-sm font-semibold text-violet-300 mb-3 flex items-center gap-2">
-            <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-            </svg>
-            Why Privacy Matters
-          </h4>
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg bg-slate-800/50 p-3">
-              <div className="text-xs text-rose-400 mb-1">❌ Problem</div>
-              <div className="text-xs text-slate-400">Front-runners see your bet</div>
-            </div>
-            <div className="rounded-lg bg-slate-800/50 p-3">
-              <div className="text-xs text-amber-400 mb-1">🔒 Our Solution</div>
-              <div className="text-xs text-slate-400">Bet hidden until reveal</div>
-            </div>
-            <div className="rounded-lg bg-slate-800/50 p-3">
-              <div className="text-xs text-emerald-400 mb-1">✓ Result</div>
-              <div className="text-xs text-slate-400">Fair batch execution</div>
-            </div>
-          </div>
-        </div>
-
-        <div className="mb-6">
-          <div className="flex rounded-lg bg-slate-800/50 p-1 mb-4">
-            <button
-              onClick={() => setPhase("commit")}
-              className={cn(
-                "flex-1 rounded-md py-2 text-sm font-medium transition-all",
-                phase === "commit"
-                  ? "bg-indigo-500 text-white"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              1. Commit Phase
-            </button>
-            <button
-              onClick={() => setPhase("reveal")}
-              className={cn(
-                "flex-1 rounded-md py-2 text-sm font-medium transition-all",
-                phase === "reveal"
-                  ? "bg-amber-500 text-white"
-                  : "text-slate-400 hover:text-white"
-              )}
-            >
-              2. Reveal Phase
-            </button>
-          </div>
-
-          {phase === "commit" && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-slate-800/50 p-4">
-                <div className="text-sm text-slate-300 mb-3">During commit phase:</div>
-                <div className="space-y-2 text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                    Generate random salt (secret)
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                    Create hash: keccak256(outcome + salt + address)
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                    Submit hash + collateral amount only
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
-                    Your YES/NO choice stays secret!
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg bg-indigo-500/10 border border-indigo-500/30 p-3">
-                <div className="font-mono text-xs text-indigo-300 break-all">
-                  commitHash: 0x7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069
-                </div>
-              </div>
-            </div>
-          )}
-
-          {phase === "reveal" && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-slate-800/50 p-4">
-                <div className="text-sm text-slate-300 mb-3">During reveal phase:</div>
-                <div className="space-y-2 text-xs text-slate-400">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    Submit your outcome (YES/NO) + salt
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    Contract verifies hash matches commitment
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    All reveals happen in same time window
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    Batch settles at uniform clearing price
-                  </div>
-                </div>
-              </div>
-              <div className="rounded-lg bg-amber-500/10 border border-amber-500/30 p-3">
-                <div className="font-mono text-xs text-amber-300">
-                  reveal(outcome: true, salt: 0x1234...5678)
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-xl bg-slate-800/50 p-4 mb-6">
-          <div className="text-xs font-medium text-indigo-400 uppercase tracking-wider mb-3">
-            Timeline
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-indigo-400">5 min</div>
-              <div className="text-xs text-slate-500">Commit Window</div>
-            </div>
-            <div className="flex-1 h-1 bg-slate-700 mx-4 rounded-full overflow-hidden">
-              <div className="h-full w-1/3 bg-gradient-to-r from-indigo-500 to-amber-500" />
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-amber-400">10 min</div>
-              <div className="text-xs text-slate-500">Reveal Window</div>
-            </div>
-            <div className="flex-1 h-1 bg-slate-700 mx-4 rounded-full" />
-            <div className="text-center">
-              <div className="text-2xl font-bold text-emerald-400">Instant</div>
-              <div className="text-xs text-slate-500">Settlement</div>
-            </div>
-          </div>
-        </div>
-
-        {mode === "mock" ? (
-          <button
-            onClick={onSimulate}
-            disabled={isAnimating}
-            className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 py-4 text-lg font-semibold text-white transition-all hover:from-violet-600 hover:to-indigo-600 disabled:opacity-50"
-          >
-            {isAnimating ? (
-              <span className="flex items-center justify-center gap-2">
-                <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-                Processing... {progress}%
-              </span>
-            ) : (
-              `Simulate ${phase === "commit" ? "Commit" : "Reveal"}`
-            )}
-          </button>
-        ) : (
-          <Link
-            href="/"
-            className="block w-full rounded-xl bg-gradient-to-r from-violet-500 to-indigo-500 py-4 text-center text-lg font-semibold text-white transition-all hover:from-violet-600 hover:to-indigo-600"
-          >
-            {isConnected ? "Try Private Betting" : "Connect Wallet First"}
-          </Link>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function ClaimWinningsDemo({
   mode,
   isAnimating,
@@ -839,7 +628,7 @@ function ClaimWinningsDemo({
   return (
     <div className="space-y-6">
       <div className="rounded-2xl border border-slate-800/50 bg-slate-900/50 p-6">
-        <h2 className="text-2xl font-bold text-slate-100 mb-2">Step 4: Claim Winnings</h2>
+        <h2 className="text-2xl font-bold text-slate-100 mb-2">Step 3: Claim Winnings</h2>
         <p className="text-slate-400 mb-6">
           After the market resolves, burn your winning tokens to claim the proportional 
           share of the collateral pool.

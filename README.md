@@ -1,6 +1,6 @@
 # ENS Prediction Markets
 
-A decentralized prediction market platform built on Uniswap v4, featuring **privacy-preserving betting** through commit-reveal mechanisms and ENS integration for human-readable market names.
+A decentralized prediction market platform built on Uniswap v4 with ENS integration for human-readable market names.
 
 ## Live Demo
 
@@ -10,38 +10,8 @@ Visit `/demo` in the frontend to see an interactive walkthrough of all features.
 
 | Contract | Address |
 |----------|---------|
-| MarketFactory | `0x5ab4d6d9c05f28bff69ad48cab9d119803ac7a16` |
-| PredictionMarketHook | `0x3e59cd5f19ba3affdd77aaf2cb7a1a72282e3ac0` |
-| PrivateBettingHook | `0x38498093d43e1d9b3fb86f492c64ceb9eb902880` |
-
-## Privacy Features (Uniswap v4 Privacy DeFi Track)
-
-This project implements **Privacy DeFi** through:
-
-- **Commit-Reveal Betting** - Hide your bet direction (YES/NO) until the reveal phase
-- **Batch Settlement** - All bets in a window execute at uniform price
-- **MEV Protection** - Front-runners cannot see your position before execution
-- **Fair Execution** - No information asymmetry between participants
-
-```
-COMMIT PHASE          REVEAL PHASE          SETTLEMENT
-    │                     │                     │
-    ▼                     ▼                     ▼
-┌─────────┐          ┌─────────┐          ┌─────────┐
-│ Submit  │          │ Reveal  │          │ Execute │
-│ hash +  │    →     │ outcome │    →     │ at same │
-│ amount  │          │ + salt  │          │ price   │
-└─────────┘          └─────────┘          └─────────┘
-   5 min               10 min              Instant
-```
-
-### Why Privacy Matters for Prediction Markets
-
-| Problem             | Traditional Markets                         | Our Solution                           |
-| ------------------- | ------------------------------------------- | -------------------------------------- |
-| Front-running       | MEV bots see your bet and trade ahead       | Bet direction hidden until reveal      |
-| Information leakage | Large bets move the market before execution | Batch settlement at uniform price      |
-| Adverse selection   | Informed traders exploit visible order flow | All participants reveal simultaneously |
+| MarketFactory | `0xC8e9fB7E459F9E684D1416e021C28Ae155151447` |
+| PredictionMarketHook | `0xC8AF775a8C11B217581d4850d1d02296C953bAC0` |
 
 ## Architecture
 
@@ -61,18 +31,7 @@ COMMIT PHASE          REVEAL PHASE          SETTLEMENT
 │   └─────────────────────────────────────┘                      │
 │                         │                                       │
 │                         ▼                                       │
-│   2. User commits hidden bet (hash only)                       │
-│                         │                                       │
-│                         ▼                                       │
-│   ┌─────────────────────────────────────┐                      │
-│   │      PRIVATE BETTING HOOK           │                      │
-│   │  • Commit: hash(outcome, salt)      │                      │
-│   │  • Reveal: outcome + salt           │                      │
-│   │  • Batch settle at uniform price    │                      │
-│   └─────────────────────────────────────┘                      │
-│                         │                                       │
-│                         ▼                                       │
-│   3. Bets execute against Uniswap v4 pool                      │
+│   2. User places bet against Uniswap v4 pool                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -104,11 +63,6 @@ cd packages/uniswap-v4
 forge test
 ```
 
-Run privacy tests specifically:
-
-```bash
-forge test --match-contract PrivateBettingHookTest -vvv
-```
 
 ### Start Frontend
 
@@ -143,11 +97,6 @@ cd packages/uniswap-v4
 PRIVATE_KEY=your_key forge script script/Deploy.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast
 ```
 
-Deploy PrivateBettingHook:
-
-```bash
-PRIVATE_KEY=your_key forge script script/DeployPrivateBettingHook.s.sol --rpc-url $SEPOLIA_RPC_URL --broadcast
-```
 
 ### Frontend (Vercel)
 

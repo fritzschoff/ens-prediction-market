@@ -8,7 +8,6 @@ Next.js frontend for ENS Prediction Markets. Features market discovery, betting 
 - Market creation with ENS registration
 - Wallet connection via RainbowKit
 - Real-time odds display
-- Privacy-preserving betting (commit-reveal)
 - Interactive demo walkthrough
 - ENS data visualization
 
@@ -63,8 +62,7 @@ Browse all active prediction markets with filters and search.
 Individual market page with:
 
 - Current odds display
-- Betting panel (standard)
-- Private betting panel (commit-reveal)
+- Betting panel
 - Position management
 - Resolution criteria
 - ENS data visualization
@@ -83,7 +81,6 @@ Interactive hackathon demo showcasing:
 
 - Market creation flow
 - Standard betting
-- Private betting (commit-reveal)
 - Winning redemption
 - Toggle between mock and live modes
 
@@ -101,14 +98,6 @@ Market preview with odds and volume.
 
 Standard betting interface with outcome selection and amount input.
 
-### PrivateBetPanel
-
-Privacy-preserving betting with commit-reveal mechanism:
-
-- Commit phase: Submit hidden bet hash
-- Reveal phase: Reveal outcome + salt
-- Settlement: Batch execution at uniform price
-
 ### PositionManager
 
 Display and manage user positions.
@@ -125,22 +114,6 @@ Fetch market data from ENS text records and on-chain state:
 
 ```typescript
 const { market, isLoading, error } = useMarketData("btc-100k");
-```
-
-### usePrivateBetting
-
-Manage commit-reveal betting flow:
-
-```typescript
-const {
-  commitBet,
-  revealBet,
-  claimWinnings,
-  batchInfo,
-  commitment,
-  getPhase,
-  getTimeRemaining,
-} = usePrivateBetting(poolKey);
 ```
 
 ### useBetActions
